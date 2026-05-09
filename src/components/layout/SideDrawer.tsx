@@ -1,19 +1,33 @@
-import React, { useEffect, useRef } from 'react';
+import { useRouter } from "expo-router";
 import {
-  View, Text, Animated, TouchableOpacity, Pressable,
-  Dimensions, StyleSheet,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+  Bot,
+  Briefcase,
+  Compass,
+  DollarSign,
+  Home,
+  LogOut,
+  MapPin,
+  Settings,
+  Users,
+  X,
+} from "lucide-react-native";
+import React, { useEffect, useRef } from "react";
 import {
-  Home, Compass, Bot, Briefcase, MapPin, DollarSign,
-  Settings, LogOut, X, Users,
-} from 'lucide-react-native';
-import { Avatar } from '../ui/Avatar';
-import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../stores/authStore';
+  Animated,
+  Dimensions,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useAuth } from "../../hooks/useAuth";
+import { supabase } from "../../lib/supabase";
+import { useAuthStore } from "../../stores/authStore";
+import { Avatar } from "../ui/Avatar";
 
-const DRAWER_WIDTH = Dimensions.get('window').width * 0.75;
+const DRAWER_WIDTH = Dimensions.get("window").width * 0.75;
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -21,13 +35,13 @@ interface SideDrawerProps {
 }
 
 const NAV_ITEMS = [
-  { label: 'Home',             route: '/(tourist)/home',    icon: Home },
-  { label: 'Explore Map',      route: '/(tourist)/explore', icon: Compass },
-  { label: 'AI Trip Planner',  route: '/(tourist)/ai-plan', icon: Bot },
-  { label: 'My Bookings',      route: '/(tourist)/bookings',icon: Briefcase },
-  { label: 'Find Guides',      route: '/guides',            icon: Users },
-  { label: 'Stays & Lodges',   route: '/stays',             icon: MapPin },
-  { label: 'Currency',         route: '/converter',         icon: DollarSign },
+  { label: "Home", route: "/(tourist)/home", icon: Home },
+  { label: "Explore Map", route: "/(tourist)/explore", icon: Compass },
+  { label: "AI Trip Planner", route: "/(tourist)/ai-plan", icon: Bot },
+  { label: "My Bookings", route: "/(tourist)/bookings", icon: Briefcase },
+  { label: "Find Guides", route: "/guides", icon: Users },
+  { label: "Stays & Lodges", route: "/stays", icon: MapPin },
+  { label: "Currency", route: "/converter", icon: DollarSign },
 ];
 
 export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
@@ -61,18 +75,28 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
     setTimeout(async () => {
       await supabase.auth.signOut();
       useAuthStore.getState().setAuth(null, null);
-      router.replace('/welcome');
+      router.replace("/welcome");
     }, 280);
   }
 
   if (!isOpen) return null;
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    <Modal
+      visible={isOpen}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
       {/* Backdrop */}
       <Animated.View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.45)', opacity }]}
-        pointerEvents={isOpen ? 'auto' : 'none'}
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: "rgba(0,0,0,0.45)", opacity },
+        ]}
+        pointerEvents={isOpen ? "auto" : "none"}
       >
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
@@ -84,15 +108,19 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
       >
         {/* Header */}
         <View style={styles.drawerHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <Avatar size={48} src={profile?.avatar_url || undefined} borderMint />
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+            <Avatar
+              size={48}
+              src={profile?.avatar_url || undefined}
+              borderMint
+            />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>
-                {profile?.full_name || 'Traveler'}
+                {profile?.full_name || "Traveler"}
               </Text>
               <View style={styles.roleBadge}>
                 <Text style={styles.roleText}>
-                  {profile?.role === 'guide' ? 'GUIDE' : 'EXPLORER'}
+                  {profile?.role === "guide" ? "GUIDE" : "EXPLORER"}
                 </Text>
               </View>
             </View>
@@ -106,7 +134,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
 
         {/* Navigation items */}
         <View style={{ flex: 1, paddingVertical: 8 }}>
-          {NAV_ITEMS.map(item => {
+          {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <TouchableOpacity
@@ -130,12 +158,12 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.navRow}
-          onPress={() => navigate('/(tourist)/settings')}
+          onPress={() => navigate("/(tourist)/settings")}
         >
           <View style={styles.navIcon}>
             <Settings size={18} color="#717973" />
           </View>
-          <Text style={[styles.navLabel, { color: '#717973' }]}>Settings</Text>
+          <Text style={[styles.navLabel, { color: "#717973" }]}>Settings</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -143,64 +171,65 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
           style={[styles.navRow, { marginBottom: 24 }]}
           onPress={handleLogout}
         >
-          <View style={[styles.navIcon, { backgroundColor: '#FEE2E2' }]}>
+          <View style={[styles.navIcon, { backgroundColor: "#FEE2E2" }]}>
             <LogOut size={18} color="#DC2626" />
           </View>
-          <Text style={[styles.navLabel, { color: '#DC2626' }]}>Log Out</Text>
+          <Text style={[styles.navLabel, { color: "#DC2626" }]}>Log Out</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   drawer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
     shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 24,
   },
   drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 56,
     paddingBottom: 20,
   },
   userName: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1C1E',
+    fontWeight: "700",
+    color: "#1A1C1E",
   },
   roleBadge: {
     marginTop: 4,
-    backgroundColor: '#C8E6C9',
-    alignSelf: 'flex-start',
+    backgroundColor: "#C8E6C9",
+    alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 20,
   },
   roleText: {
     fontSize: 9,
-    fontWeight: '700',
-    color: '#8B1A1A',
+    fontWeight: "700",
+    color: "#8B1A1A",
     letterSpacing: 0.8,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     marginHorizontal: 20,
   },
   navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
@@ -208,14 +237,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#FFF0ED',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFF0ED",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 14,
   },
   navLabel: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1C1E',
+    fontWeight: "600",
+    color: "#1A1C1E",
   },
 });
