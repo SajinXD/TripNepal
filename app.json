@@ -1,0 +1,95 @@
+{
+  "expo": {
+    "name": "Trip Nepal",
+    "slug": "trip-nepal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "tripnepal",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#5C0F0F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tripnepal.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Trip Nepal uses your location to show nearby destinations and connect you with guides in your area.",
+        "NSCameraUsageDescription": "Trip Nepal needs camera access for KYC verification and profile photos.",
+        "NSPhotoLibraryUsageDescription": "Trip Nepal needs photo library access to upload profile pictures and KYC documents.",
+        "NSMicrophoneUsageDescription": "Trip Nepal needs microphone access for voice messages with your guide.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.tripnepal.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#5C0F0F"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "VIBRATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE_FROM_ENV"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Trip Nepal accesses your photos to let you upload profile pictures and KYC documents."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Trip Nepal uses your location to find nearby guides and destinations."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#8B1A1A"
+        }
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "04b147c0-3983-4662-9ca0-22f9d79f46a3"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/04b147c0-3983-4662-9ca0-22f9d79f46a3"
+    }
+  }
+}
