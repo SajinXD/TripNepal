@@ -90,93 +90,93 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
       onRequestClose={onClose}
     >
       <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
-      {/* Backdrop */}
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          { backgroundColor: "rgba(0,0,0,0.45)", opacity },
-        ]}
-        pointerEvents={isOpen ? "auto" : "none"}
-      >
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-      </Animated.View>
+        {/* Backdrop */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            { backgroundColor: "rgba(0,0,0,0.45)", opacity },
+          ]}
+          pointerEvents={isOpen ? "auto" : "none"}
+        >
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        </Animated.View>
 
-      {/* Drawer panel */}
-      <Animated.View
-        style={[styles.drawer, { transform: [{ translateX }] }]}
-        pointerEvents="box-none"
-      >
-        {/* Header */}
-        <View style={styles.drawerHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-            <Avatar
-              size={48}
-              src={profile?.avatar_url || undefined}
-              borderMint
-            />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={styles.userName} numberOfLines={1}>
-                {profile?.full_name || "Traveler"}
-              </Text>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>
-                  {profile?.role === "guide" ? "GUIDE" : "EXPLORER"}
+        {/* Drawer panel */}
+        <Animated.View
+          style={[styles.drawer, { transform: [{ translateX }] }]}
+          pointerEvents="box-none"
+        >
+          {/* Header */}
+          <View style={styles.drawerHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+              <Avatar
+                size={48}
+                src={profile?.avatar_url || undefined}
+                borderMint
+              />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {profile?.full_name || "Traveler"}
                 </Text>
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleText}>
+                    {profile?.role === "guide" ? "GUIDE" : "EXPLORER"}
+                  </Text>
+                </View>
               </View>
             </View>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <X size={22} color="#717973" />
+            </Pressable>
           </View>
-          <Pressable onPress={onClose} hitSlop={8}>
-            <X size={22} color="#717973" />
-          </Pressable>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        {/* Navigation items */}
-        <View style={{ flex: 1, paddingVertical: 8 }}>
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <TouchableOpacity
-                key={item.route}
-                activeOpacity={0.7}
-                style={styles.navRow}
-                onPress={() => navigate(item.route)}
-              >
-                <View style={styles.navIcon}>
-                  <Icon size={18} color="#8B1A1A" />
-                </View>
-                <Text style={styles.navLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* Bottom */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.navRow}
-          onPress={() => navigate("/(tourist)/settings")}
-        >
-          <View style={styles.navIcon}>
-            <Settings size={18} color="#717973" />
+          {/* Navigation items */}
+          <View style={{ flex: 1, paddingVertical: 8 }}>
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <TouchableOpacity
+                  key={item.route}
+                  activeOpacity={0.7}
+                  style={styles.navRow}
+                  onPress={() => navigate(item.route)}
+                >
+                  <View style={styles.navIcon}>
+                    <Icon size={18} color="#8B1A1A" />
+                  </View>
+                  <Text style={styles.navLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <Text style={[styles.navLabel, { color: "#717973" }]}>Settings</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.navRow, { marginBottom: 24 }]}
-          onPress={handleLogout}
-        >
-          <View style={[styles.navIcon, { backgroundColor: "#FEE2E2" }]}>
-            <LogOut size={18} color="#DC2626" />
-          </View>
-          <Text style={[styles.navLabel, { color: "#DC2626" }]}>Log Out</Text>
-        </TouchableOpacity>
-      </Animated.View>
+          <View style={styles.divider} />
+
+          {/* Bottom */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.navRow}
+            onPress={() => navigate("/(tourist)/settings")}
+          >
+            <View style={styles.navIcon}>
+              <Settings size={18} color="#717973" />
+            </View>
+            <Text style={[styles.navLabel, { color: "#717973" }]}>Settings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.navRow, { marginBottom: 24 }]}
+            onPress={handleLogout}
+          >
+            <View style={[styles.navIcon, { backgroundColor: "#FEE2E2" }]}>
+              <LogOut size={18} color="#DC2626" />
+            </View>
+            <Text style={[styles.navLabel, { color: "#DC2626" }]}>Log Out</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </Modal>
   );
