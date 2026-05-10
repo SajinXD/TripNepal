@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeScreen } from '@/components/layout/SafeScreen';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Calendar, MessageCircle, TrendingUp, DownloadCloud, Clock, CheckCircle, XCircle, ChevronRight, UserPlus } from 'lucide-react-native';
+import { Calendar, MessageCircle, Clock, CheckCircle, XCircle, ChevronRight, UserPlus } from 'lucide-react-native';
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
   requested:   { label: 'New Request',  color: '#D97706', bg: '#FEF3C7' },
@@ -30,46 +30,59 @@ export default function GuideInbox() {
 
   const load = useCallback(async () => {
     if (!user) return;
+    try {
+      const [bRes, tRes, cntRes, rRes] = await Promise.all([
+        (supabase.from('bookings') as any)
+          .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
+          .eq('guide_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        (supabase.from('chat_threads') as any)
+          .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
+          .eq('guide_id', user.id)
+          .order('last_message_at', { ascending: false })
+          .limit(5),
+        (supabase.from('bookings') as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('guide_id', user.id)
+          .eq('status', 'requested'),
+        (supabase.from('chat_requests') as any)
+          .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
+          .eq('guide_id', user.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false }),
+      ]);
+      setBookings(bRes.data || []);
+      setThreads(tRes.data || []);
+      setPendingCount(cntRes.count || 0);
+      setChatRequests(rRes.data || []);
 
-    // Load booking requests
-    // @ts-ignore
-    const { data: bData } = await (supabase.from('bookings') as any)
-      .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
-      .eq('guide_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    setBookings(bData || []);
-    setLoadingB(false);
+      // Response rate: % of chat requests that guide has responded to (not still pending)
+      const { data: crAll } = await (supabase.from('chat_requests') as any)
+        .select('status')
+        .eq('guide_id', user.id);
+      const totalRequests = crAll?.length ?? 0;
+      const responded = (crAll || []).filter((r: any) => r.status !== 'pending').length;
+      const responseRate = totalRequests > 0 ? Math.round((responded / totalRequests) * 100) : 100;
 
-    // Load chat threads
-    // @ts-ignore
-    const { data: tData } = await (supabase.from('chat_threads') as any)
-      .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
-      .eq('guide_id', user.id)
-      .order('last_message_at', { ascending: false })
-      .limit(5);
-    setThreads(tData || []);
-    setLoadingT(false);
+      // Completion rate: completed / (accepted + in_progress + completed)
+      const { data: bkAll } = await (supabase.from('bookings') as any)
+        .select('status')
+        .eq('guide_id', user.id)
+        .in('status', ['accepted', 'in_progress', 'completed']);
+      const totalActive = bkAll?.length ?? 0;
+      const completedCount = (bkAll || []).filter((b: any) => b.status === 'completed').length;
+      const completionRate = totalActive > 0 ? Math.round((completedCount / totalActive) * 100) : 100;
 
-    // Get pending count
-    // @ts-ignore
-    const { count } = await (supabase.from('bookings') as any)
-      .select('id', { count: 'exact', head: true })
-      .eq('guide_id', user.id)
-      .eq('status', 'requested');
-    setPendingCount(count || 0);
-
-    // Load pending chat requests
-    // @ts-ignore
-    const { data: rData } = await (supabase.from('chat_requests') as any)
-      .select('*, tourist:profiles!tourist_id(full_name, avatar_url)')
-      .eq('guide_id', user.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    setChatRequests(rData || []);
-    setLoadingR(false);
-
-    setRefreshing(false);
+      setStats({ response: responseRate, completion: completionRate });
+    } catch (e) {
+      console.warn('Inbox load error', e);
+    } finally {
+      setLoadingB(false);
+      setLoadingT(false);
+      setLoadingR(false);
+      setRefreshing(false);
+    }
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
@@ -77,7 +90,7 @@ export default function GuideInbox() {
   useEffect(() => {
     if (!user) return;
     
-    const bookingsChannel = supabase.channel('guide_bookings_changes')
+    const bookingsChannel = supabase.channel(`guide_bookings_${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings', filter: `guide_id=eq.${user.id}` },
@@ -85,7 +98,7 @@ export default function GuideInbox() {
       )
       .subscribe();
 
-    const threadsChannel = supabase.channel('guide_threads_changes')
+    const threadsChannel = supabase.channel(`guide_threads_${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_threads', filter: `guide_id=eq.${user.id}` },
@@ -93,7 +106,7 @@ export default function GuideInbox() {
       )
       .subscribe();
 
-    const requestsChannel = supabase.channel('guide_requests_changes')
+    const requestsChannel = supabase.channel(`guide_requests_${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_requests', filter: `guide_id=eq.${user.id}` },
@@ -111,15 +124,34 @@ export default function GuideInbox() {
   const activeBookings = bookings.filter(b => ['accepted', 'in_progress'].includes(b.status));
 
   async function acceptRequest(req: any) {
-    const { data: thread } = await (supabase.from('chat_threads') as any)
-      .insert({ tourist_id: req.tourist_id, guide_id: user!.id })
-      .select()
-      .single();
-    await (supabase.from('chat_requests') as any)
-      .update({ status: 'accepted' })
-      .eq('id', req.id);
-    load();
-    if (thread) router.push(`/chat/${thread.id}` as any);
+    try {
+      // Check if a thread already exists for this pair
+      const { data: existing } = await (supabase.from('chat_threads') as any)
+        .select('id')
+        .eq('tourist_id', req.tourist_id)
+        .eq('guide_id', user!.id)
+        .maybeSingle();
+
+      let threadId: string;
+      if (existing) {
+        threadId = existing.id;
+      } else {
+        const { data: newThread, error } = await (supabase.from('chat_threads') as any)
+          .insert({ tourist_id: req.tourist_id, guide_id: user!.id })
+          .select()
+          .single();
+        if (error) throw error;
+        threadId = newThread.id;
+      }
+
+      await (supabase.from('chat_requests') as any)
+        .update({ status: 'accepted' })
+        .eq('id', req.id);
+      load();
+      router.push(`/chat/${threadId}` as any);
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Could not accept request. Please try again.');
+    }
   }
 
   async function declineRequest(req: any) {
@@ -313,10 +345,6 @@ export default function GuideInbox() {
         <View className="mb-6">
           <Text className="font-semibold text-lg text-text mb-3">Performance</Text>
           <View className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-            <View className="flex-row items-center mb-4">
-              <TrendingUp size={20} color="#8B1A1A" />
-              <Text className="font-semibold text-text ml-2">Top 5% Guide</Text>
-            </View>
             <View className="mb-4">
               <View className="flex-row justify-between mb-1">
                 <Text className="text-xs text-text-secondary font-medium">Response Rate</Text>
@@ -338,14 +366,7 @@ export default function GuideInbox() {
           </View>
         </View>
 
-        {/* ── Offline Maps ── */}
-        <View className="bg-primary rounded-2xl p-5 shadow-sm flex-row items-center mb-10">
-          <DownloadCloud size={24} color="#DDF1E1" />
-          <View className="ml-4 flex-1">
-            <Text className="font-semibold text-white">Offline Maps Ready</Text>
-            <Text className="text-mint/80 text-xs mt-1">Annapurna region synced 2 hours ago</Text>
-          </View>
-        </View>
+        <View className="h-6" />
       </ScrollView>
     </SafeScreen>
   );

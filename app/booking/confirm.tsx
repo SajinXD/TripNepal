@@ -17,7 +17,7 @@ export default function BookingConfirmScreen() {
     if (!bookingId) { setLoading(false); return; }
     // @ts-ignore
     (supabase.from('bookings') as any)
-      .select('id, status, payment_status, payment_method, start_date, end_date, total_days, total_amount_npr, guide_id, tourist_id, guide_profiles(profiles(full_name))')
+      .select('id, status, start_date, end_date, total_days, total_amount_npr, guide_id, tourist_id, guide_profiles(profiles(full_name))')
       .eq('id', bookingId)
       .single()
       .then(({ data }: any) => { setBooking(data); setLoading(false); });
@@ -54,8 +54,6 @@ export default function BookingConfirmScreen() {
     }
   }
 
-
-
   const shortId = bookingId ? `TRP-${bookingId.slice(-6).toUpperCase()}` : 'TRP-XXXXX';
   const guideName = ((booking?.guide_profiles as any)?.profiles as any)?.full_name || 'Your Guide';
 
@@ -68,7 +66,7 @@ export default function BookingConfirmScreen() {
 
         <Text className="font-display text-3xl text-text text-center mb-3">Booking Requested!</Text>
         <Text className="font-sans text-base text-text-secondary text-center mb-8">
-          Your payment is held securely in escrow. {loading ? '' : guideName + ' has'} been notified and has 24 hours to accept.
+          Your booking request has been sent.{loading ? '' : ' ' + guideName + ' has'} been notified and has 24 hours to accept.
         </Text>
 
         {loading ? (
@@ -96,12 +94,8 @@ export default function BookingConfirmScreen() {
                   <Text className="text-text-secondary text-sm">Dates</Text>
                   <Text className="font-medium text-text text-sm">{booking.start_date} → {booking.end_date}</Text>
                 </View>
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-text-secondary text-sm">Payment</Text>
-                  <Text className="font-medium text-text text-sm capitalize">{booking.payment_method || '—'} · Held in Escrow</Text>
-                </View>
                 <View className="flex-row justify-between">
-                  <Text className="text-text-secondary text-sm">Total Paid</Text>
+                  <Text className="text-text-secondary text-sm">Total Amount</Text>
                   <Text className="font-display text-primary text-base">रू {booking.total_amount_npr?.toLocaleString()}</Text>
                 </View>
               </>

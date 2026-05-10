@@ -4,6 +4,7 @@ import { Menu, Sparkles, Bell } from 'lucide-react-native';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '../ui/Button';
 import { SideDrawer } from './SideDrawer';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ScreenHeaderProps {
   showTripNow?: boolean;
@@ -15,6 +16,7 @@ interface ScreenHeaderProps {
 
 export function ScreenHeader({ showTripNow, showBell, onTripNow, onBellPress, className }: ScreenHeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { profile } = useAuth();
 
   return (
     <>
@@ -45,7 +47,7 @@ export function ScreenHeader({ showTripNow, showBell, onTripNow, onBellPress, cl
             </Pressable>
           )}
 
-          <Avatar size={36} />
+          <Avatar size={36} src={profile?.avatar_url || undefined} />
         </View>
       </View>
 

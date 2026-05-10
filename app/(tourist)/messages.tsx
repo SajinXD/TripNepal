@@ -19,29 +19,31 @@ export default function MessagesScreen() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    // @ts-ignore
-    const { data: tData } = await (supabase.from('chat_threads') as any)
-      .select('*, guide:profiles!guide_id(full_name, avatar_url), tourist:profiles!tourist_id(full_name, avatar_url)')
-      .eq('tourist_id', user.id)
-      .order('last_message_at', { ascending: false });
-    setThreads(tData || []);
+    try {
+      const { data: tData } = await (supabase.from('chat_threads') as any)
+        .select('*, guide:profiles!guide_id(full_name, avatar_url), tourist:profiles!tourist_id(full_name, avatar_url)')
+        .eq('tourist_id', user.id)
+        .order('last_message_at', { ascending: false });
+      setThreads(tData || []);
 
-    // @ts-ignore
-    const { data: rData } = await (supabase.from('chat_requests') as any)
-      .select('*, guide:profiles!guide_id(full_name)')
-      .eq('tourist_id', user.id)
-      .order('created_at', { ascending: false });
-    setChatRequests(rData || []);
-
-    setLoading(false);
-    setRefreshing(false);
+      const { data: rData } = await (supabase.from('chat_requests') as any)
+        .select('*, guide:profiles!guide_id(full_name)')
+        .eq('tourist_id', user.id)
+        .order('created_at', { ascending: false });
+      setChatRequests(rData || []);
+    } catch (e) {
+      console.warn('Messages load error', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     if (!user) return;
-    const threadsChannel = supabase.channel('tourist_threads_changes')
+    const threadsChannel = supabase.channel(`tourist_threads_${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_threads', filter: `tourist_id=eq.${user.id}` },
@@ -49,7 +51,7 @@ export default function MessagesScreen() {
       )
       .subscribe();
 
-    const requestsChannel = supabase.channel('tourist_requests_changes')
+    const requestsChannel = supabase.channel(`tourist_requests_${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_requests', filter: `tourist_id=eq.${user.id}` },
@@ -74,6 +76,19 @@ export default function MessagesScreen() {
         }
       },
     ]);
+  }
+
+  async function openChatFromRequest(req: any) {
+    const { data: thread } = await (supabase.from('chat_threads') as any)
+      .select('id')
+      .eq('tourist_id', user!.id)
+      .eq('guide_id', req.guide_id)
+      .maybeSingle();
+    if (thread) {
+      router.push(`/chat/${thread.id}` as any);
+    } else {
+      Alert.alert('Chat not ready', 'The chat thread is not available yet.');
+    }
   }
 
   return (
@@ -134,6 +149,14 @@ export default function MessagesScreen() {
                         className="border border-outline-variant rounded-lg px-3 py-1.5"
                       >
                         <Text className="text-xs text-on-surface-variant font-medium">Cancel</Text>
+                      </TouchableOpacity>
+                    )}
+                    {isAccepted && (
+                      <TouchableOpacity
+                        onPress={() => openChatFromRequest(req)}
+                        className="bg-primary rounded-lg px-3 py-1.5"
+                      >
+                        <Text className="text-xs text-white font-medium">Open Chat</Text>
                       </TouchableOpacity>
                     )}
                   </View>

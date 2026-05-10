@@ -88,19 +88,10 @@ export default function NewBookingScreen() {
 
       if (error) throw error;
 
-      // Navigate to payment screen
-      router.push({
-        pathname: '/booking/payment',
-        params: {
-          bookingId: booking.id,
-          guideId,
-          amount: total,
-          travelers,
-          days,
-          pickup,
-          notes,
-          guideName: (guide?.profiles as any)?.full_name || 'Your Guide',
-        }
+      // Navigate directly to confirmation screen (no payment)
+      router.replace({
+        pathname: '/booking/confirm',
+        params: { bookingId: booking.id },
       });
     } catch (err: any) {
       console.error('Booking error:', err);
@@ -259,7 +250,7 @@ export default function NewBookingScreen() {
 
       <View className="p-6 bg-white border-t border-border">
         <Button onPress={handleContinue} loading={loading} fullWidth size="lg">
-          Continue to Payment
+          Confirm Booking
         </Button>
       </View>
     </SafeScreen>

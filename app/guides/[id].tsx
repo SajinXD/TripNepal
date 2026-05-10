@@ -77,8 +77,8 @@ export default function GuideDetailScreen() {
           .eq('id', id)
           .single(),
         (supabase.from('reviews') as any)
-          .select('*, profiles!tourist_id(full_name)')
-          .eq('guide_id', id)
+          .select('*, profiles!reviewer_id(full_name)')
+          .eq('reviewee_id', id)
           .order('created_at', { ascending: false })
           .limit(10),
       ]);
@@ -129,27 +129,58 @@ export default function GuideDetailScreen() {
   async function submitReview() {
     if (!user) { Alert.alert('Sign in required'); return; }
     setSubmitting(true);
-    const { error } = await (supabase.from('reviews') as any).insert({
-      guide_id: id,
-      tourist_id: user.id,
-      rating: reviewRating,
-      comment: reviewText.trim() || null,
-      booking_id: null,
-    });
-    setSubmitting(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      setReviewModal(false);
-      setReviewText('');
-      setReviewRating(5);
-      const { data: r } = await (supabase.from('reviews') as any)
-        .select('*, profiles!tourist_id(full_name)')
+    try {
+      // Find a completed booking between this tourist and guide (required by schema)
+      const { data: completedBooking } = await (supabase.from('bookings') as any)
+        .select('id')
+        .eq('tourist_id', user.id)
         .eq('guide_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (r) setReviews(r);
-      Alert.alert('Thank you!', 'Your review has been submitted.');
+        .eq('status', 'completed')
+        .limit(1)
+        .maybeSingle();
+
+      if (!completedBooking) {
+        Alert.alert(
+          'Trip Required',
+          'You can only leave a review after completing a trip with this guide.'
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      const { error } = await (supabase.from('reviews') as any).insert({
+        reviewer_id: user.id,
+        reviewee_id: id,
+        rating: reviewRating,
+        comment: reviewText.trim() || null,
+        booking_id: completedBooking.id,
+        is_guide_review: true,
+      });
+
+      if (error) {
+        Alert.alert('Could not save review', error.message);
+      } else {
+        setReviewModal(false);
+        setReviewText('');
+        setReviewRating(5);
+        // Reload reviews list and guide profile (triggers update average_rating + total_reviews)
+        const [{ data: r }, { data: freshGuide }] = await Promise.all([
+          (supabase.from('reviews') as any)
+            .select('*, profiles!reviewer_id(full_name)')
+            .eq('reviewee_id', id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+          (supabase.from('guide_profiles') as any)
+            .select('*, profiles(full_name, avatar_url, email)')
+            .eq('id', id)
+            .single(),
+        ]);
+        if (r) setReviews(r);
+        if (freshGuide) setGuide(freshGuide);
+        Alert.alert('Thank you!', 'Your review has been submitted.');
+      }
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -305,7 +336,7 @@ export default function GuideDetailScreen() {
                 <View key={rev.id} style={styles.reviewCard}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Text style={{ fontWeight: '700', fontSize: 14, color: '#1A1C1E' }}>
-                      {rev.profiles?.full_name || 'Anonymous'}
+                      {(rev.profiles as any)?.full_name || 'Anonymous'}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#9CA3AF' }}>
                       {new Date(rev.created_at).toLocaleDateString()}
@@ -325,56 +356,64 @@ export default function GuideDetailScreen() {
 
       {/* Floating CTA */}
       <View style={[styles.cta, { paddingBottom: insets.bottom + 12 }]}>
-        {/* Book Now — always visible unless viewing own profile */}
         {user?.id !== id && (
-          <TouchableOpacity
-            style={[styles.ctaBtn, { backgroundColor: '#8B1A1A', marginRight: 8 }]}
-            activeOpacity={0.8}
-            onPress={() => router.push(`/booking/new?guideId=${id}` as any)}
-          >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Book Now</Text>
-          </TouchableOpacity>
-        )}
+          <View style={{ width: '100%' }}>
+            {/* Row 1: Book Now + Connect/Message */}
+            <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[styles.ctaBtn, { backgroundColor: '#8B1A1A', marginRight: 8 }]}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/booking/new?guideId=${id}` as any)}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Book Now</Text>
+              </TouchableOpacity>
 
-        {/* Connect button — state-aware */}
-        {user?.id !== id && (
-          <>
-            {requestStatus === 'accepted' && chatThreadId ? (
-              <TouchableOpacity
-                style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6 }]}
-                activeOpacity={0.8}
-                onPress={() => router.push(`/chat/${chatThreadId}` as any)}
-              >
-                <MessageSquare size={18} color="#0077B6" style={{ marginRight: 6 }} />
-                <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>Message</Text>
-              </TouchableOpacity>
-            ) : requestStatus === 'pending' ? (
-              <TouchableOpacity
-                style={[styles.ctaBtn, { backgroundColor: '#F3F4F6', flex: 0.6 }]}
-                disabled
-              >
-                <Clock size={16} color="#9CA3AF" style={{ marginRight: 6 }} />
-                <Text style={{ color: '#9CA3AF', fontWeight: '700', fontSize: 14 }}>Request Sent</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6, opacity: requestLoading ? 0.6 : 1 }]}
-                activeOpacity={0.8}
-                onPress={sendRequest}
-                disabled={requestLoading}
-              >
-                {requestLoading
-                  ? <ActivityIndicator size="small" color="#0077B6" />
-                  : <>
-                      <Send size={16} color="#0077B6" style={{ marginRight: 6 }} />
-                      <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>
-                        {requestStatus === 'rejected' ? 'Send Again' : 'Send Request'}
-                      </Text>
-                    </>
-                }
-              </TouchableOpacity>
-            )}
-          </>
+              {requestStatus === 'accepted' && chatThreadId ? (
+                <TouchableOpacity
+                  style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6 }]}
+                  activeOpacity={0.8}
+                  onPress={() => router.push(`/chat/${chatThreadId}` as any)}
+                >
+                  <MessageSquare size={18} color="#0077B6" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>Message</Text>
+                </TouchableOpacity>
+              ) : requestStatus === 'pending' ? (
+                <TouchableOpacity
+                  style={[styles.ctaBtn, { backgroundColor: '#F3F4F6', flex: 0.6 }]}
+                  disabled
+                >
+                  <Clock size={16} color="#9CA3AF" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#9CA3AF', fontWeight: '700', fontSize: 14 }}>Request Sent</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6, opacity: requestLoading ? 0.6 : 1 }]}
+                  activeOpacity={0.8}
+                  onPress={sendRequest}
+                  disabled={requestLoading}
+                >
+                  {requestLoading
+                    ? <ActivityIndicator size="small" color="#0077B6" />
+                    : <>
+                        <Send size={16} color="#0077B6" style={{ marginRight: 6 }} />
+                        <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>
+                          {requestStatus === 'rejected' ? 'Send Again' : 'Send Request'}
+                        </Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Row 2: Find Another Guide */}
+            <TouchableOpacity
+              style={[styles.ctaBtn, { backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' }]}
+              activeOpacity={0.8}
+              onPress={() => router.push('/guides' as any)}
+            >
+              <Text style={{ color: '#414844', fontWeight: '700', fontSize: 14 }}>Find Another Guide</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
-import { User, Shield, Bell, HelpCircle, FileText, LogOut, ChevronRight, Star, DollarSign } from 'lucide-react-native';
+import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { User, Shield, HelpCircle, FileText, LogOut, ChevronRight, DollarSign, Pencil } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { Badge } from '../../src/components/ui/Badge';
@@ -8,13 +8,16 @@ import { IconTile } from '../../src/components/ui/IconTile';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useAuth } from '../../src/hooks/useAuth';
 import { useRouter } from 'expo-router';
+import { pickAndUploadImage } from '../../src/lib/image-picker';
 
 export default function GuideSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, profile } = useAuthStore();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { user, profile } = useAuth();
+  const { updateProfile } = useAuthStore();
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [guideProfile, setGuideProfile] = useState<any>(null);
   const [kycStatus, setKycStatus] = useState<string>('not_submitted');
   const [loading, setLoading] = useState(true);
@@ -44,10 +47,31 @@ export default function GuideSettingsScreen() {
         text: 'Log Out', style: 'destructive',
         onPress: async () => {
           await supabase.auth.signOut();
-          router.replace('/welcome');
+          useAuthStore.getState().setAuth(null, null);
         },
       },
     ]);
+  };
+
+  const handleAvatarUpload = async () => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await pickAndUploadImage('avatars', user.id);
+      if (url) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: url })
+          .eq('id', user.id);
+        if (error) throw error;
+        updateProfile({ avatar_url: url });
+        Alert.alert('Success', 'Profile picture updated successfully!');
+      }
+    } catch (error: any) {
+      Alert.alert('Upload Failed', error.message || 'Could not update profile picture.');
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const kycBadge = () => {
@@ -72,8 +96,19 @@ export default function GuideSettingsScreen() {
         {/* Profile Card */}
         <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ marginRight: 16 }}>
+            <View style={{ position: 'relative', marginRight: 16 }}>
               <Avatar size={64} src={avatarSrc} borderMint />
+              <Pressable
+                onPress={handleAvatarUpload}
+                disabled={uploadingAvatar}
+                style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, backgroundColor: 'white', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' }}
+              >
+                {uploadingAvatar ? (
+                  <ActivityIndicator size="small" color="#8B1A1A" />
+                ) : (
+                  <Pencil size={12} color="#414844" />
+                )}
+              </Pressable>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '700', fontSize: 20, color: '#1A1C1E' }}>{displayName}</Text>
@@ -161,25 +196,7 @@ export default function GuideSettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Preferences */}
-        <Text style={{ fontSize: 11, fontWeight: '700', color: '#717973', letterSpacing: 1.2, marginBottom: 10 }}>PREFERENCES</Text>
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 24, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
-            <IconTile icon={<Bell size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#1A1C1E' }}>Booking Notifications</Text>
-              <Text style={{ fontSize: 13, color: '#717973' }}>New requests, messages, payments</Text>
-            </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#C1C8C2', true: '#8B1A1A' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        </View>
-
-        {/* Help */}
+        {/* Support */}
         <Text style={{ fontSize: 11, fontWeight: '700', color: '#717973', letterSpacing: 1.2, marginBottom: 10 }}>SUPPORT</Text>
         <View style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Pressable

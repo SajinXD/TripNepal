@@ -84,7 +84,7 @@ export default function ChatScreen() {
   const isGuide = thread?.guide_id === user?.id;
   const partner = thread ? (isGuide ? (thread.tourist as any) : (thread.guide as any)) : null;
   const partnerInitial = partner?.full_name?.[0]?.toUpperCase() || '?';
-  const partnerName = partner?.full_name || 'Loading...';
+  const partnerName = partner?.full_name || (thread ? 'Unknown' : '...');
 
   async function sendMessage() {
     if (!input.trim() || !user || !id) return;

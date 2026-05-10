@@ -2,10 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
+import { Avatar } from '../../src/components/ui/Avatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/hooks/useAuth';
-import { Calendar, MapPin, ChevronRight, Clock, CheckCircle, XCircle, Loader, Star } from 'lucide-react-native';
+import { Calendar, MapPin, ChevronRight, Clock, CheckCircle, XCircle, Loader, Star, Users } from 'lucide-react-native';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
   requested:    { label: 'Pending',     color: '#D97706', bg: '#FEF3C7', Icon: Clock },
@@ -30,7 +31,7 @@ export default function BookingsScreen() {
 
   const loadBookings = useCallback(async () => {
     if (!user) return;
-    // @ts-ignore - bookings table inferred as never in stub types
+    // @ts-ignore
     const { data } = await (supabase.from('bookings') as any)
       .select('*, guide_profiles(price_per_day, profiles(full_name, avatar_url))')
       .eq('tourist_id', user.id)
@@ -49,6 +50,51 @@ export default function BookingsScreen() {
     if (activeTab === 'Completed') return ['completed', 'cancelled', 'rejected'].includes(b.status);
     return true;
   });
+
+  async function handleMessageGuide(bookingId: string) {
+    const { data: thread } = await (supabase.from('chat_threads') as any)
+      .select('id')
+      .eq('booking_id', bookingId)
+      .maybeSingle();
+    if (thread) {
+      router.push(`/chat/${thread.id}` as any);
+    } else {
+      Alert.alert('Chat not available', 'Chat will be available once the guide accepts your booking.');
+    }
+  }
+
+  async function handleMarkComplete(booking: any) {
+    const guideName = (booking.guide_profiles?.profiles as any)?.full_name || 'your guide';
+    Alert.alert(
+      'Mark Trip as Completed?',
+      `Confirm that you have completed your trip with ${guideName}. This will update their performance record.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark Complete',
+          onPress: async () => {
+            try {
+              await (supabase.from('bookings') as any)
+                .update({ status: 'completed' })
+                .eq('id', booking.id);
+              // Fetch current count fresh from DB to avoid stale-data increment errors
+              const { data: gp } = await (supabase.from('guide_profiles') as any)
+                .select('total_trips_completed')
+                .eq('id', booking.guide_id)
+                .single();
+              await (supabase.from('guide_profiles') as any)
+                .update({ total_trips_completed: (gp?.total_trips_completed ?? 0) + 1 })
+                .eq('id', booking.guide_id);
+              loadBookings();
+              Alert.alert('Trip Completed!', `Thank you for travelling with ${guideName}. Don't forget to leave a review!`);
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Could not update trip status.');
+            }
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <View className="flex-1 bg-surface dark:bg-gray-900">
@@ -86,7 +132,7 @@ export default function BookingsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadBookings(); }} tintColor="#8B1A1A" />}
         >
           {filtered.length === 0 ? (
-            <View className="items-center py-20">
+            <View className="items-center py-16">
               <Text className="text-[48px] mb-4">🏔️</Text>
               <Text className="font-displaySemiBold text-[18px] text-on-surface mb-2">No bookings yet</Text>
               <Text className="font-body text-[14px] text-on-surface-variant text-center px-8">
@@ -94,21 +140,13 @@ export default function BookingsScreen() {
                   ? 'Start exploring guides and book your first Nepal adventure!'
                   : `No ${activeTab.toLowerCase()} bookings found.`}
               </Text>
-              {activeTab === 'All' && (
-                <Pressable
-                  onPress={() => router.push('/guides' as any)}
-                  className="mt-6 bg-primary px-6 py-3 rounded-full"
-                >
-                  <Text className="text-white font-bodySemibold">Find a Guide</Text>
-                </Pressable>
-              )}
             </View>
           ) : (
             filtered.map(booking => {
               const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.requested;
               const StatusIcon = cfg.Icon;
               const guideName = (booking.guide_profiles?.profiles as any)?.full_name || 'Guide';
-              const guideInitial = guideName[0].toUpperCase();
+              const guideAvatarUrl = (booking.guide_profiles?.profiles as any)?.avatar_url || undefined;
 
               return (
                 <Pressable
@@ -132,10 +170,8 @@ export default function BookingsScreen() {
                   <View className="p-4">
                     <View className="flex-row items-center mb-3">
                       {/* Guide avatar */}
-                      <View className="w-11 h-11 bg-primary/10 rounded-full items-center justify-center mr-3">
-                        <Text className="font-bold text-primary text-base">{guideInitial}</Text>
-                      </View>
-                      <View className="flex-1">
+                      <Avatar src={guideAvatarUrl} size={44} />
+                      <View className="flex-1 ml-3">
                         <Text className="font-displaySemiBold text-[16px] text-on-surface">{guideName}</Text>
                         <Text className="font-body text-[12px] text-on-surface-variant">Licensed Mountain Guide</Text>
                       </View>
@@ -164,7 +200,7 @@ export default function BookingsScreen() {
                     {/* Footer */}
                     <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-outline-variant">
                       <View>
-                        <Text className="font-body text-[11px] text-on-surface-variant">Total Paid</Text>
+                        <Text className="font-body text-[11px] text-on-surface-variant">Total Amount</Text>
                         <Text className="font-displaySemiBold text-[18px] text-primary">
                           रू {booking.total_amount_npr?.toLocaleString() || '—'}
                         </Text>
@@ -176,19 +212,24 @@ export default function BookingsScreen() {
                         </View>
                       )}
                       {booking.status === 'accepted' && (
-                        <Pressable
-                          onPress={() => router.push(`/chat/${booking.id}` as any)}
-                          className="bg-primary px-4 py-2 rounded-full flex-row items-center"
-                        >
-                          <Text className="text-white font-bodySemibold text-[13px]">Message Guide</Text>
-                        </Pressable>
+                        <View className="flex-row gap-2">
+                          <Pressable
+                            onPress={() => handleMessageGuide(booking.id)}
+                            className="bg-primary px-3 py-2 rounded-full flex-row items-center"
+                          >
+                            <Text className="text-white font-bodySemibold text-[12px]">Message Guide</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleMarkComplete(booking)}
+                            className="bg-green-50 border border-green-300 px-3 py-2 rounded-full"
+                          >
+                            <Text className="font-bodySemibold text-[12px] text-green-700">Trip Done</Text>
+                          </Pressable>
+                        </View>
                       )}
                       {booking.status === 'completed' && (
                         <Pressable
-                          onPress={() => Alert.alert('Leave a Review', `Rate your experience with ${(booking.guide_profiles?.profiles as any)?.full_name || 'your guide'}?`, [
-                            { text: 'Not Now', style: 'cancel' },
-                            { text: 'Write Review', onPress: () => router.push(`/booking/${booking.id}` as any) },
-                          ])}
+                          onPress={() => router.push(`/guides/${booking.guide_id}` as any)}
                           className="bg-primary/10 border border-primary/30 px-3 py-1.5 rounded-full"
                         >
                           <Text className="font-bodySemibold text-[12px] text-primary">Leave Review</Text>
@@ -200,7 +241,18 @@ export default function BookingsScreen() {
               );
             })
           )}
-          <View className="h-10" />
+
+          {/* Always-visible Find a Guide button */}
+          <Pressable
+            onPress={() => router.push('/guides' as any)}
+            className="mt-2 mb-6 bg-white border border-outline-variant rounded-[16px] py-4 items-center flex-row justify-center"
+            style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 }}
+          >
+            <Users size={18} color="#8B1A1A" />
+            <Text className="font-bodySemibold text-[14px] text-primary ml-2">Find a Guide</Text>
+          </Pressable>
+
+          <View className="h-6" />
         </ScrollView>
       )}
     </View>

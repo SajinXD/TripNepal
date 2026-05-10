@@ -34,7 +34,7 @@ interface SideDrawerProps {
   onClose: () => void;
 }
 
-const NAV_ITEMS = [
+const TOURIST_NAV_ITEMS = [
   { label: "Home", route: "/(tourist)/home", icon: Home },
   { label: "Explore Map", route: "/(tourist)/explore", icon: Compass },
   { label: "AI Trip Planner", route: "/(tourist)/ai-plan", icon: Bot },
@@ -44,9 +44,17 @@ const NAV_ITEMS = [
   { label: "Currency", route: "/converter", icon: DollarSign },
 ];
 
+const GUIDE_NAV_ITEMS = [
+  { label: "Dashboard", route: "/(guide)/dashboard", icon: Home },
+  { label: "Inbox", route: "/(guide)/inbox", icon: Briefcase },
+  { label: "AI Chat", route: "/(guide)/ai-plan", icon: Bot },
+];
+
 export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const router = useRouter();
   const { profile } = useAuth();
+  const isGuide = profile?.role === 'guide';
+  const NAV_ITEMS = isGuide ? GUIDE_NAV_ITEMS : TOURIST_NAV_ITEMS;
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -158,7 +166,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.navRow}
-            onPress={() => navigate("/(tourist)/settings")}
+            onPress={() => navigate(isGuide ? "/(guide)/settings" : "/(tourist)/settings")}
           >
             <View style={styles.navIcon}>
               <Settings size={18} color="#717973" />

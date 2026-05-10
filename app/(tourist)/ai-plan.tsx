@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import Groq from 'groq-sdk';
-import { Bot, Send, Mic, Trash2, Navigation, Utensils, Mountain, Compass, TreePine, Camera } from 'lucide-react-native';
+import { Bot, Send, Trash2, Navigation, Utensils, Mountain, Compass, TreePine, Camera } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -412,15 +412,7 @@ export default function AiPlanScreen() {
             >
               <Send size={17} color={loading ? '#717973' : '#fff'} />
             </Pressable>
-          ) : (
-            <Pressable
-              style={{ width: 36, height: 36, backgroundColor: '#C8E6C9', borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              onPress={() => Alert.alert('Voice Input', 'Voice input is coming soon! For now, type your question.')}
-              disabled={loading}
-            >
-              <Mic size={17} color="#8B1A1A" />
-            </Pressable>
-          )}
+          ) : null}
         </View>
         <Text style={{ fontSize: 10, color: '#C1C8C2', textAlign: 'center', marginTop: 6 }}>
           AI Sherpa uses Groq · Llama 3.3 — responses may vary

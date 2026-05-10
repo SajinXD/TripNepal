@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, Image, TextInput, Linking } from 'react-native';
 import { ExploreMap } from '../../src/components/map/ExploreMap';
-import { Search, SlidersHorizontal, Navigation, MapPin } from 'lucide-react-native';
+import { Search, Navigation, MapPin } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../../src/components/ui/Card';
 import { RatingPill } from '../../src/components/ui/RatingPill';
@@ -101,12 +101,10 @@ export default function ExploreScreen() {
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
-          {searchQuery.length > 0 ? (
+          {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')}>
               <Text className="text-[13px] text-primary font-bodyMedium px-1">Clear</Text>
             </Pressable>
-          ) : (
-            <SlidersHorizontal size={20} color="#8B1A1A" />
           )}
         </View>
       </View>

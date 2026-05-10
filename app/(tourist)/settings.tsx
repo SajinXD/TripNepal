@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
-import { Pencil, User, Shield, Moon, Bell, DollarSign, Globe, HelpCircle, FileText, LogOut, ChevronRight } from 'lucide-react-native';
+import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { Pencil, User, Shield, DollarSign, Globe, HelpCircle, FileText, LogOut, ChevronRight } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Card } from '../../src/components/ui/Card';
 import { Badge } from '../../src/components/ui/Badge';
@@ -18,9 +18,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, profile, updateProfile } = useAuthStore();
-  const { isDark, toggleDark, loadTheme } = useThemeStore();
+  const { isDark, loadTheme } = useThemeStore();
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [language, setLanguage] = useState('English (US)');
   const [currency, setCurrency] = useState('NPR - Nepalese Rupee');
   const [stats, setStats] = useState({ expeditions: 0, points: 0 });
@@ -55,7 +54,6 @@ export default function SettingsScreen() {
         onPress: async () => {
           await supabase.auth.signOut();
           useAuthStore.getState().setAuth(null, null);
-          router.replace('/welcome');
         },
       },
     ]);
@@ -189,34 +187,6 @@ export default function SettingsScreen() {
         {/* Preferences */}
         <Text style={{ fontSize: 11, fontWeight: '700', color: subTextColor, letterSpacing: 1.2, marginBottom: 12 }}>PREFERENCES</Text>
         <View style={{ backgroundColor: cardBg, borderRadius: 16, marginBottom: 28, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
-          {/* Dark Mode */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-            <IconTile icon={<Moon size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: textColor }}>Dark Mode</Text>
-              <Text style={{ fontSize: 13, color: subTextColor }}>{isDark ? 'Dark theme is ON' : 'Light theme is ON'}</Text>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleDark}
-              trackColor={{ false: '#C1C8C2', true: '#8B1A1A' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          {/* Notifications */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-            <IconTile icon={<Bell size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: textColor }}>Notifications</Text>
-              <Text style={{ fontSize: 13, color: subTextColor }}>Expedition updates, Offers</Text>
-            </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#C1C8C2', true: '#8B1A1A' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
           {/* Currency */}
           <Pressable style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }} onPress={handleCurrency}>
             <IconTile icon={<DollarSign size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
