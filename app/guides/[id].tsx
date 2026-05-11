@@ -320,11 +320,8 @@ export default function GuideDetailScreen() {
 
           {/* Reviews */}
           <View style={styles.section}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>Reviews ({totalReviews})</Text>
-              <TouchableOpacity onPress={() => setReviewModal(true)} style={styles.writeReviewBtn}>
-                <Text style={styles.writeReviewText}>Write a Review</Text>
-              </TouchableOpacity>
             </View>
 
             {reviews.length === 0 ? (

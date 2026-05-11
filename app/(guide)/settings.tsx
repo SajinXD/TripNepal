@@ -1,16 +1,16 @@
+import { useRouter } from 'expo-router';
+import { ChevronRight, DollarSign, FileText, HelpCircle, LogOut, Pencil, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
-import { User, Shield, HelpCircle, FileText, LogOut, ChevronRight, DollarSign, Pencil } from 'lucide-react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { Badge } from '../../src/components/ui/Badge';
 import { IconTile } from '../../src/components/ui/IconTile';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../src/hooks/useAuth';
+import { pickAndUploadImage } from '../../src/lib/image-picker';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useAuth } from '../../src/hooks/useAuth';
-import { useRouter } from 'expo-router';
-import { pickAndUploadImage } from '../../src/lib/image-picker';
 
 export default function GuideSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -34,8 +34,13 @@ export default function GuideSettingsScreen() {
         .eq('user_id', user.id)
         .single(),
     ]).then(([gp, kyc]) => {
-      if (gp.data) setGuideProfile(gp.data);
-      if (kyc.data) setKycStatus(kyc.data.status);
+      const gpData = gp.data;
+      if (gpData) setGuideProfile(gpData);
+      if (gpData?.is_verified) {
+        setKycStatus('approved');
+      } else if (kyc.data?.status && kyc.data.status !== 'not_submitted') {
+        setKycStatus(kyc.data.status);
+      }
       setLoading(false);
     });
   }, [user?.id]);

@@ -38,10 +38,38 @@ export default function GuideDashboardScreen() {
 
   const loadStats = useCallback(async () => {
     if (!user) return;
-    // @ts-ignore
-    const { data, error } = await supabase.rpc('guide_dashboard_stats', { p_guide_id: user.id });
-    if (!error && data) setStats(data);
-    setLoadingStats(false);
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const [gpRes, pendingRes, weekRes] = await Promise.all([
+        (supabase.from('guide_profiles') as any)
+          .select('average_rating, total_reviews, total_trips_completed')
+          .eq('id', user.id)
+          .single(),
+        (supabase.from('bookings') as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('guide_id', user.id)
+          .eq('status', 'requested'),
+        (supabase.from('bookings') as any)
+          .select('total_amount_npr')
+          .eq('guide_id', user.id)
+          .eq('status', 'completed')
+          .gte('updated_at', sevenDaysAgo),
+      ]);
+      const weekEarnings = (weekRes.data || []).reduce(
+        (sum: number, b: any) => sum + (b.total_amount_npr || 0), 0
+      );
+      setStats({
+        avg_rating: gpRes.data?.average_rating ?? null,
+        total_reviews: gpRes.data?.total_reviews ?? 0,
+        completed_trips: gpRes.data?.total_trips_completed ?? 0,
+        pending_requests: pendingRes.count ?? 0,
+        week_earnings_npr: weekEarnings,
+      });
+    } catch (e) {
+      console.warn('Stats load error', e);
+    } finally {
+      setLoadingStats(false);
+    }
   }, [user]);
 
   const loadBookings = useCallback(async () => {
@@ -66,11 +94,11 @@ export default function GuideDashboardScreen() {
     loadBookings();
   }, [loadStats, loadBookings]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadStats();
-    loadBookings();
-  };
+    await Promise.all([loadStats(), loadBookings()]);
+    setRefreshing(false);
+  }, [loadStats, loadBookings]);
 
   async function respondToBooking(bookingId: string, accept: boolean) {
     setRespondingId(bookingId);
@@ -118,19 +146,13 @@ export default function GuideDashboardScreen() {
         {/* Hero */}
         <View className="bg-primary rounded-[16px] p-5 mb-5">
           <Text className="font-displayBold text-[24px] text-white mb-1">Namaste, {firstName}</Text>
-          <Text className="font-body text-[14px] text-white/80 leading-[20px] pr-10 mb-5">
+          <Text className="font-body text-[14px] text-white/80 leading-[20px] pr-10">
             {loadingStats
               ? 'Loading your dashboard...'
               : pending > 0
                 ? `You have ${pending} new trek request${pending > 1 ? 's' : ''} waiting.`
                 : 'No pending requests. You\'re all caught up!'}
           </Text>
-          <Pressable
-            className="bg-white rounded-[8px] px-4 py-2 self-start"
-            onPress={() => Alert.alert('Status', 'Go Offline / Online toggle coming soon!')}
-          >
-            <Text className="font-bodySemibold text-[14px] text-primary">Go Offline</Text>
-          </Pressable>
         </View>
 
         {/* Stats cards */}
