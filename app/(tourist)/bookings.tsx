@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert, Modal, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert, Modal, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Avatar } from '../../src/components/ui/Avatar';
@@ -289,6 +289,7 @@ export default function BookingsScreen() {
 
       {/* Review Modal */}
       <Modal visible={reviewModalVisible} transparent animationType="slide" onRequestClose={() => setReviewModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={reviewStyles.overlay} onPress={() => setReviewModalVisible(false)} />
         <View style={reviewStyles.sheet}>
           <Text style={reviewStyles.title}>
@@ -330,6 +331,7 @@ export default function BookingsScreen() {
             <Text style={{ color: '#9CA3AF', fontSize: 14 }}>Skip for now</Text>
           </TouchableOpacity>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
