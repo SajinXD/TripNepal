@@ -135,7 +135,6 @@ export default function KYCWizard() {
     if (!user) return;
     setLoading(true);
 
-    // Best-effort: save what we can, then always navigate to pending screen.
     try {
       await (supabase.from('guide_profiles') as any)
         .upsert({
@@ -145,16 +144,18 @@ export default function KYCWizard() {
           guide_license_number: licenseNumber.trim() || null,
           bio_long: bio.trim() || null,
           specializations: selectedSpecializations.length ? selectedSpecializations : undefined,
-          service_areas: selectedAreas.length ? selectedAreas.map(a => a.toLowerCase().split(' ')[0]) : undefined,
+          service_areas: selectedAreas.length ? selectedAreas : undefined,
+          is_submitted: true,
+          status: 'pending',
         }, { onConflict: 'id' });
 
       await (supabase.from('kyc_verifications') as any)
         .upsert({
           user_id: user.id,
           status: 'pending',
-          full_name_legal: fullNameLegal.trim() || 'Unknown',
-          date_of_birth: dateOfBirth || '1990-01-01',
-          permanent_address: permanentAddress.trim() || 'Nepal',
+          full_name_legal: fullNameLegal.trim(),
+          date_of_birth: dateOfBirth,
+          permanent_address: permanentAddress.trim(),
           citizenship_number: citizenshipNumber.trim() || null,
           submitted_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
@@ -162,12 +163,14 @@ export default function KYCWizard() {
       if (phone.trim()) {
         await (supabase.from('profiles') as any).update({ phone: phone.trim() }).eq('id', user.id);
       }
-    } catch (e) {
-      console.warn('KYC profile save error (non-fatal):', e);
-    }
 
-    // Always go to pending — you approve manually in the DB (is_verified = true)
-    router.replace('/kyc/pending');
+      router.replace('/kyc/pending');
+    } catch (e: any) {
+      console.error('KYC submission error:', e);
+      Alert.alert('Submission Failed', e?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleNext() {
