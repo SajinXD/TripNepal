@@ -1,21 +1,21 @@
 import { useRouter } from "expo-router";
 import {
-  ChevronRight,
-  DollarSign,
-  FileText,
-  HelpCircle,
-  LogOut,
-  Pencil,
-  Shield,
+	ChevronRight,
+	DollarSign,
+	FileText,
+	HelpCircle,
+	LogOut,
+	Pencil,
+	Shield,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
+	ActivityIndicator,
+	Alert,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../src/components/layout/ScreenHeader";
@@ -36,8 +36,6 @@ export default function GuideSettingsScreen() {
 	const [guideProfile, setGuideProfile] = useState<any>(null);
 	const [kycStatus, setKycStatus] = useState<string>("not_submitted");
 	const [loading, setLoading] = useState(true);
-
-	console.log(user, profile);
 
 	useEffect(() => {
 		if (!user?.id) return;

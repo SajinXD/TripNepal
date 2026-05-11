@@ -69,8 +69,6 @@ export async function pickAndUploadImage(
 			throw error;
 		}
 
-		console.log(filePath);
-
 		// 5. Return either public URL or the internal path
 		if (bucket === "avatars" || bucket === "destination-images") {
 			const {

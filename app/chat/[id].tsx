@@ -1,190 +1,359 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Send, Image as ImageIcon, ChevronLeft, MoreVertical } from 'lucide-react-native';
-import { SafeScreen } from '@/components/layout/SafeScreen';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { SafeScreen } from "@/components/layout/SafeScreen";
+import { Avatar } from "@/components/ui/Avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { pickAndUploadImage } from "@/lib/image-picker";
+import { supabase } from "@/lib/supabase";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+	ChevronLeft,
+	Image as ImageIcon,
+	MoreVertical,
+	Send,
+} from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	ActivityIndicator,
+	Image as RNImage,
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
+} from "react-native";
 
 type ChatMessage = {
-  id: string;
-  thread_id: string;
-  sender_id: string;
-  message: string;
-  created_at: string;
-  is_read: boolean;
+	id: string;
+	thread_id: string;
+	sender_id: string;
+	message: string | null;
+	attachment_url: string | null;
+	message_type: "text" | "image" | "location" | "system";
+	created_at: string;
+	is_read: boolean;
 };
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { user } = useAuth();
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const router = useRouter();
+	const { user } = useAuth();
 
-  const [thread, setThread] = useState<any>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const scrollViewRef = useRef<ScrollView>(null);
+	const [thread, setThread] = useState<any>(null);
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [input, setInput] = useState("");
+	const [loading, setLoading] = useState(true);
+	const [uploadingImage, setUploadingImage] = useState(false);
+	const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+	const scrollViewRef = useRef<ScrollView>(null);
 
-  // Load thread header
-  useEffect(() => {
-    if (!id || !user) return;
-    (supabase.from('chat_threads') as any)
-      .select('id, tourist_id, guide_id, tourist:profiles!tourist_id(full_name, avatar_url), guide:profiles!guide_id(full_name, avatar_url)')
-      .eq('id', id)
-      .single()
-      .then(({ data }: any) => setThread(data));
-  }, [id, user]);
+	async function generateSignedUrls(msgs: ChatMessage[]) {
+		const imageMessages = msgs.filter(
+			(m) => m.message_type === "image" && m.attachment_url,
+		);
+		if (imageMessages.length === 0) return;
 
-  const markRead = useCallback(async () => {
-    if (!id || !user) return;
-    await (supabase.from('chat_messages') as any)
-      .update({ is_read: true })
-      .eq('thread_id', id)
-      .neq('sender_id', user.id)
-      .eq('is_read', false);
-  }, [id, user]);
+		const entries = await Promise.all(
+			imageMessages.map(async (m) => {
+				const { data } = await supabase.storage
+					.from("chat-attachments")
+					.createSignedUrl(m.attachment_url!, 3600);
+				return data?.signedUrl ? ([m.id, data.signedUrl] as const) : null;
+			}),
+		);
 
-  // Load messages and subscribe
-  useEffect(() => {
-    if (!id || !user) return;
-    setLoading(true);
+		setSignedUrls((prev) => {
+			const next = { ...prev };
+			for (const entry of entries) {
+				if (entry) next[entry[0]] = entry[1];
+			}
+			return next;
+		});
+	}
 
-    (supabase.from('chat_messages') as any)
-      .select('*')
-      .eq('thread_id', id)
-      .order('created_at', { ascending: true })
-      .then(({ data }: any) => {
-        setMessages(data || []);
-        setLoading(false);
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 100);
-        markRead();
-      });
+	// Load thread header
+	useEffect(() => {
+		if (!id || !user) return;
+		(supabase.from("chat_threads") as any)
+			.select(
+				"id, tourist_id, guide_id, tourist:profiles!tourist_id(full_name, avatar_url), guide:profiles!guide_id(full_name, avatar_url)",
+			)
+			.eq("id", id)
+			.single()
+			.then(({ data }: any) => setThread(data));
+	}, [id, user]);
 
-    const channel = supabase.channel(`chat_${id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `thread_id=eq.${id}` },
-        (payload) => {
-          const msg = payload.new as ChatMessage;
-          setMessages(prev => [...prev, msg]);
-          setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 50);
-          if (msg.sender_id !== user.id) {
-            (supabase.from('chat_messages') as any)
-              .update({ is_read: true })
-              .eq('id', msg.id);
-          }
-        }
-      )
-      .subscribe();
+	const markRead = useCallback(async () => {
+		if (!id || !user) return;
+		await (supabase.from("chat_messages") as any)
+			.update({ is_read: true })
+			.eq("thread_id", id)
+			.neq("sender_id", user.id)
+			.eq("is_read", false);
+	}, [id, user]);
 
-    return () => { supabase.removeChannel(channel); };
-  }, [id, user, markRead]);
+	// Load messages and subscribe
+	useEffect(() => {
+		if (!id || !user) return;
+		setLoading(true);
 
-  const isGuide = thread?.guide_id === user?.id;
-  const partner = thread ? (isGuide ? (thread.tourist as any) : (thread.guide as any)) : null;
-  const partnerInitial = partner?.full_name?.[0]?.toUpperCase() || '?';
-  const partnerName = partner?.full_name || (thread ? 'Unknown' : '...');
+		(supabase.from("chat_messages") as any)
+			.select("*")
+			.eq("thread_id", id)
+			.order("created_at", { ascending: true })
+			.then(({ data }: any) => {
+				const msgs: ChatMessage[] = data || [];
+				setMessages(msgs);
+				setLoading(false);
+				generateSignedUrls(msgs);
+				setTimeout(
+					() =>
+						scrollViewRef.current?.scrollToEnd({ animated: false }),
+					100,
+				);
+				markRead();
+			});
 
-  async function sendMessage() {
-    if (!input.trim() || !user || !id) return;
-    const text = input.trim();
-    setInput('');
+		const channel = supabase
+			.channel(`chat_${id}`)
+			.on(
+				"postgres_changes",
+				{
+					event: "INSERT",
+					schema: "public",
+					table: "chat_messages",
+					filter: `thread_id=eq.${id}`,
+				},
+				(payload) => {
+					const msg = payload.new as ChatMessage;
+					setMessages((prev) => [...prev, msg]);
+					if (msg.message_type === "image" && msg.attachment_url) {
+						generateSignedUrls([msg]);
+					}
+					setTimeout(
+						() =>
+							scrollViewRef.current?.scrollToEnd({
+								animated: true,
+							}),
+						50,
+					);
+					if (msg.sender_id !== user.id) {
+						(supabase.from("chat_messages") as any)
+							.update({ is_read: true })
+							.eq("id", msg.id);
+					}
+				},
+			)
+			.subscribe();
 
-    await (supabase.from('chat_messages') as any).insert({
-      thread_id: id,
-      sender_id: user.id,
-      message: text,
-    });
+		return () => {
+			supabase.removeChannel(channel);
+		};
+	}, [id, user, markRead]);
 
-    await (supabase.from('chat_threads') as any)
-      .update({ last_message_at: new Date().toISOString() })
-      .eq('id', id);
-  }
+	const isGuide = thread?.guide_id === user?.id;
+	const partner = thread
+		? isGuide
+			? (thread.tourist as any)
+			: (thread.guide as any)
+		: null;
+	const partnerName = partner?.full_name || (thread ? "Unknown" : "...");
 
-  return (
-    <SafeScreen edges={['top', 'bottom']} bg="#F7F7F4">
-      {/* Header */}
-      <View className="px-4 py-3 flex-row justify-between items-center bg-white border-b border-border">
-        <View className="flex-row items-center flex-1">
-          <TouchableOpacity onPress={() => router.back()} className="p-2 mr-1">
-            <ChevronLeft size={24} color="#0A0A0A" />
-          </TouchableOpacity>
-          <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
-            <Text className="font-bold text-primary">{partnerInitial}</Text>
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="font-semibold text-text text-base" numberOfLines={1}>{partnerName}</Text>
-            <Text className="text-xs text-primary font-medium">
-              {isGuide ? 'Tourist' : 'Guide'}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity className="p-2">
-          <MoreVertical size={20} color="#6B7280" />
-        </TouchableOpacity>
-      </View>
+	async function sendMessage() {
+		if (!input.trim() || !user || !id) return;
+		const text = input.trim();
+		setInput("");
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView
-          ref={scrollViewRef}
-          className="flex-1 px-4 pt-4"
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <View className="items-center justify-center py-16">
-              <ActivityIndicator color="#8B1A1A" />
-            </View>
-          ) : messages.length === 0 ? (
-            <View className="items-center justify-center py-10">
-              <Text className="text-text-secondary text-sm">No messages yet. Say hello! 👋</Text>
-            </View>
-          ) : (
-            messages.map(msg => {
-              const isMe = msg.sender_id === user?.id;
-              return (
-                <View key={msg.id} className={`mb-4 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}>
-                  <View className={`px-4 py-3 rounded-2xl ${isMe ? 'bg-primary rounded-tr-sm' : 'bg-white border border-border shadow-sm rounded-tl-sm'}`}>
-                    <Text className={`text-base ${isMe ? 'text-white' : 'text-text'}`}>{msg.message}</Text>
-                  </View>
-                  <Text className={`text-[10px] text-text-muted mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {isMe && (
-                      <Text className="text-[10px] text-text-muted"> · {msg.is_read ? 'Read' : 'Sent'}</Text>
-                    )}
-                  </Text>
-                </View>
-              );
-            })
-          )}
-          <View className="h-4" />
-        </ScrollView>
+		await (supabase.from("chat_messages") as any).insert({
+			thread_id: id,
+			sender_id: user.id,
+			message: text,
+			message_type: "text",
+		});
 
-        {/* Input */}
-        <View className="px-4 py-3 bg-white border-t border-border flex-row items-center">
-          <TouchableOpacity className="p-2 mr-1">
-            <ImageIcon size={22} color="#6B7280" />
-          </TouchableOpacity>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type a message..."
-            placeholderTextColor="#9CA3AF"
-            className="flex-1 bg-background border border-border rounded-full px-4 py-2.5 text-base text-text"
-            onSubmitEditing={sendMessage}
-            returnKeyType="send"
-            blurOnSubmit={false}
-          />
-          <TouchableOpacity
-            onPress={sendMessage}
-            disabled={!input.trim()}
-            className={`ml-2 p-3 rounded-full ${input.trim() ? 'bg-primary' : 'bg-background border border-border'}`}
-          >
-            <Send size={18} color={input.trim() ? '#FFF' : '#9CA3AF'} />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeScreen>
-  );
+		await (supabase.from("chat_threads") as any)
+			.update({ last_message_at: new Date().toISOString() })
+			.eq("id", id);
+	}
+
+	async function sendImage() {
+		if (!user || !id) return;
+		setUploadingImage(true);
+		try {
+			const url = await pickAndUploadImage("chat-attachments", id);
+			if (!url) return;
+			await (supabase.from("chat_messages") as any).insert({
+				thread_id: id,
+				sender_id: user.id,
+				message: null,
+				attachment_url: url,
+				message_type: "image",
+			});
+			await (supabase.from("chat_threads") as any)
+				.update({ last_message_at: new Date().toISOString() })
+				.eq("id", id);
+		} finally {
+			setUploadingImage(false);
+		}
+	}
+
+	return (
+		<SafeScreen edges={["top", "bottom"]} bg="#F7F7F4">
+			{/* Header */}
+			<View className="px-4 py-3 flex-row justify-between items-center bg-white border-b border-border">
+				<View className="flex-row items-center flex-1">
+					<TouchableOpacity
+						onPress={() => router.back()}
+						className="p-2 mr-1"
+					>
+						<ChevronLeft size={24} color="#0A0A0A" />
+					</TouchableOpacity>
+					<View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
+						<Avatar size={40} src={partner?.avatar_url} />
+					</View>
+					<View className="ml-3 flex-1">
+						<Text
+							className="font-semibold text-text text-base"
+							numberOfLines={1}
+						>
+							{partnerName}
+						</Text>
+						<Text className="text-xs text-primary font-medium">
+							{isGuide ? "Tourist" : "Guide"}
+						</Text>
+					</View>
+				</View>
+				<TouchableOpacity className="p-2">
+					<MoreVertical size={20} color="#6B7280" />
+				</TouchableOpacity>
+			</View>
+
+			<KeyboardAvoidingView
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
+				className="flex-1"
+			>
+				<ScrollView
+					ref={scrollViewRef}
+					className="flex-1 px-4 pt-4"
+					onContentSizeChange={() =>
+						scrollViewRef.current?.scrollToEnd({ animated: true })
+					}
+					showsVerticalScrollIndicator={false}
+				>
+					{loading ? (
+						<View className="items-center justify-center py-16">
+							<ActivityIndicator color="#8B1A1A" />
+						</View>
+					) : messages.length === 0 ? (
+						<View className="items-center justify-center py-10">
+							<Text className="text-text-secondary text-sm">
+								No messages yet. Say hello! 👋
+							</Text>
+						</View>
+					) : (
+						messages.map((msg) => {
+							const isMe = msg.sender_id === user?.id;
+							console.log(msg);
+							return (
+								<View
+									key={msg.id}
+									className={`mb-4 max-w-[80%] ${isMe ? "self-end" : "self-start"}`}
+								>
+									{msg.message_type === "image" ? (
+										signedUrls[msg.id] ? (
+											<RNImage
+												source={{ uri: signedUrls[msg.id] }}
+												style={{
+													width: 200,
+													height: 200,
+													borderRadius: 12,
+												}}
+												resizeMode="cover"
+											/>
+										) : (
+											<View
+												style={{
+													width: 200,
+													height: 200,
+													borderRadius: 12,
+													backgroundColor: "#E5E7EB",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												<ActivityIndicator color="#8B1A1A" />
+											</View>
+										)
+									) : (
+										<View
+											className={`px-4 py-3 rounded-2xl ${isMe ? "bg-primary rounded-tr-sm" : "bg-white border border-border shadow-sm rounded-tl-sm"}`}
+										>
+											<Text
+												className={`text-base ${isMe ? "text-white" : "text-text"}`}
+											>
+												{msg.message}
+											</Text>
+										</View>
+									)}
+									<Text
+										className={`text-[10px] text-text-muted mt-1 ${isMe ? "text-right" : "text-left"}`}
+									>
+										{new Date(
+											msg.created_at,
+										).toLocaleTimeString([], {
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+										{isMe && (
+											<Text className="text-[10px] text-text-muted">
+												{" "}
+												·{" "}
+												{msg.is_read ? "Read" : "Sent"}
+											</Text>
+										)}
+									</Text>
+								</View>
+							);
+						})
+					)}
+					<View className="h-4" />
+				</ScrollView>
+
+				{/* Input */}
+				<View className="px-4 py-3 bg-white border-t border-border flex-row items-center">
+					<TouchableOpacity
+						onPress={sendImage}
+						disabled={uploadingImage}
+						className="p-2 mr-1"
+					>
+						{uploadingImage ? (
+							<ActivityIndicator size="small" color="#6B7280" />
+						) : (
+							<ImageIcon size={22} color="#6B7280" />
+						)}
+					</TouchableOpacity>
+					<TextInput
+						value={input}
+						onChangeText={setInput}
+						placeholder="Type a message..."
+						placeholderTextColor="#9CA3AF"
+						className="flex-1 bg-background border border-border rounded-full px-4 py-2.5 text-base text-text"
+						onSubmitEditing={sendMessage}
+						returnKeyType="send"
+						blurOnSubmit={false}
+					/>
+					<TouchableOpacity
+						onPress={sendMessage}
+						disabled={!input.trim()}
+						className={`ml-2 p-3 rounded-full ${input.trim() ? "bg-primary" : "bg-background border border-border"}`}
+					>
+						<Send
+							size={18}
+							color={input.trim() ? "#FFF" : "#9CA3AF"}
+						/>
+					</TouchableOpacity>
+				</View>
+			</KeyboardAvoidingView>
+		</SafeScreen>
+	);
 }
