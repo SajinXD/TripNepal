@@ -57,15 +57,29 @@ export default function BookingsScreen() {
     return true;
   });
 
-  async function handleMessageGuide(bookingId: string) {
-    const { data: thread } = await (supabase.from('chat_threads') as any)
-      .select('id')
-      .eq('booking_id', bookingId)
-      .maybeSingle();
-    if (thread) {
+  async function handleMessageGuide(guideId: string) {
+    if (!user) return;
+    try {
+      // Find existing direct thread for this tourist-guide pair
+      const { data: existing } = await (supabase.from('chat_threads') as any)
+        .select('id')
+        .eq('tourist_id', user.id)
+        .eq('guide_id', guideId)
+        .is('booking_id', null)
+        .maybeSingle();
+      if (existing) {
+        router.push(`/chat/${existing.id}` as any);
+        return;
+      }
+      // Create a new direct thread
+      const { data: thread, error } = await (supabase.from('chat_threads') as any)
+        .insert({ tourist_id: user.id, guide_id: guideId })
+        .select('id')
+        .single();
+      if (error) throw error;
       router.push(`/chat/${thread.id}` as any);
-    } else {
-      Alert.alert('Chat not available', 'Chat will be available once the guide accepts your booking.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not open chat.');
     }
   }
 
@@ -233,40 +247,42 @@ export default function BookingsScreen() {
                       </Text>
                     </View>
 
-                    {booking.status === 'requested' && (
-                      <View className="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
-                        <Text className="font-bodySemibold text-[12px] text-amber-700">Awaiting Guide</Text>
-                      </View>
-                    )}
-                    {booking.status === 'accepted' && (
-                      <View className="flex-row gap-2">
-                        <Pressable
-                          onPress={() => handleMessageGuide(booking.id)}
-                          className="bg-primary px-3 py-2 rounded-full flex-row items-center"
-                        >
-                          <Text className="text-white font-bodySemibold text-[12px]">Message Guide</Text>
-                        </Pressable>
+                    <View className="flex-row gap-2 items-center">
+                      {/* Message Guide — always available for direct chat */}
+                      <Pressable
+                        onPress={() => handleMessageGuide(booking.guide_id)}
+                        className="bg-primary px-3 py-2 rounded-full flex-row items-center"
+                      >
+                        <Text className="text-white font-bodySemibold text-[12px]">Message</Text>
+                      </Pressable>
+
+                      {booking.status === 'requested' && (
+                        <View className="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                          <Text className="font-bodySemibold text-[12px] text-amber-700">Awaiting</Text>
+                        </View>
+                      )}
+                      {booking.status === 'accepted' && (
                         <Pressable
                           onPress={() => handleMarkComplete(booking)}
                           className="bg-green-50 border border-green-300 px-3 py-2 rounded-full"
                         >
                           <Text className="font-bodySemibold text-[12px] text-green-700">Trip Done</Text>
                         </Pressable>
-                      </View>
-                    )}
-                    {booking.status === 'completed' && (
-                      <Pressable
-                        onPress={() => {
-                          setReviewBooking(booking);
-                          setReviewRating(5);
-                          setReviewText('');
-                          setReviewModalVisible(true);
-                        }}
-                        className="bg-primary/10 border border-primary/30 px-3 py-1.5 rounded-full"
-                      >
-                        <Text className="font-bodySemibold text-[12px] text-primary">Leave Review</Text>
-                      </Pressable>
-                    )}
+                      )}
+                      {booking.status === 'completed' && (
+                        <Pressable
+                          onPress={() => {
+                            setReviewBooking(booking);
+                            setReviewRating(5);
+                            setReviewText('');
+                            setReviewModalVisible(true);
+                          }}
+                          className="bg-primary/10 border border-primary/30 px-3 py-1.5 rounded-full"
+                        >
+                          <Text className="font-bodySemibold text-[12px] text-primary">Review</Text>
+                        </Pressable>
+                      )}
+                    </View>
                   </View>
                 </View>
               );

@@ -1,12 +1,9 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Mail, Lock, User, Phone, CheckCircle2, Circle, Briefcase, DollarSign } from 'lucide-react-native';
+import { Mail, Lock, User, Phone, CheckCircle2, Circle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const SPEC_OPTIONS = ['trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing'];
-const AREA_OPTIONS = ['Kathmandu', 'Pokhara', 'Solukhumbu', 'Kaski', 'Chitwan', 'Mustang', 'Annapurna', 'Langtang'];
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -18,19 +15,6 @@ export default function SignupScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Guide-specific fields
-  const [experience, setExperience] = useState('');
-  const [pricePerDay, setPricePerDay] = useState('');
-  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
-  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
-
-  function toggleSpec(s: string) {
-    setSelectedSpecs(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-  }
-  function toggleArea(a: string) {
-    setSelectedAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
-  }
 
   async function handleSignup() {
     if (!email || !password || !fullName) {
@@ -61,17 +45,6 @@ export default function SignupScreen() {
       await (supabase.from('profiles') as any)
         .update({ full_name: fullName.trim(), role, ...(phone ? { phone: phone.trim() } : {}) })
         .eq('id', data.user.id);
-    }
-
-    if (data.user && role === 'guide') {
-      // Upsert handles the case where the trigger hasn't created the row yet
-      await (supabase.from('guide_profiles') as any).upsert({
-        id: data.user.id,
-        years_of_experience: parseInt(experience) || 0,
-        price_per_day: parseFloat(pricePerDay) || 3500,
-        specializations: selectedSpecs.length ? selectedSpecs : [],
-        service_areas: selectedAreas.length ? selectedAreas : [],
-      });
     }
 
     setLoading(false);
@@ -115,7 +88,7 @@ export default function SignupScreen() {
               style={[styles.roleButton, role === 'guide' && styles.roleButtonActive]}
             >
               {role === 'guide' ? <CheckCircle2 size={20} color="#8B1A1A" /> : <Circle size={20} color="#9CA3AF" />}
-              <Text style={[styles.roleText, role === 'guide' && styles.roleTextActive]}>Local Guide</Text>
+              <Text style={[styles.roleText, role === 'guide' && styles.roleTextActive]}>Guide</Text>
             </TouchableOpacity>
           </View>
 
@@ -157,81 +130,6 @@ export default function SignupScreen() {
               keyboardType="phone-pad"
             />
           </View>
-
-          {/* Guide-specific fields */}
-          {role === 'guide' && (
-            <View style={{ backgroundColor: '#FFF0ED', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-              <Text style={{ fontWeight: '700', fontSize: 15, color: '#8B1A1A', marginBottom: 14 }}>Guide Details</Text>
-
-              <Text style={styles.label}>Years of Experience</Text>
-              <View style={styles.inputRow}>
-                <Briefcase size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.input}
-                  value={experience}
-                  onChangeText={setExperience}
-                  placeholder="e.g. 5"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <Text style={styles.label}>Price Per Day (NPR)</Text>
-              <View style={styles.inputRow}>
-                <DollarSign size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.input}
-                  value={pricePerDay}
-                  onChangeText={setPricePerDay}
-                  placeholder="e.g. 3500"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <Text style={[styles.label, { marginTop: 4 }]}>Specializations</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
-                {SPEC_OPTIONS.map(s => (
-                  <TouchableOpacity
-                    key={s}
-                    activeOpacity={0.7}
-                    onPress={() => toggleSpec(s)}
-                    style={{
-                      backgroundColor: selectedSpecs.includes(s) ? '#8B1A1A' : '#fff',
-                      borderWidth: 1, borderColor: selectedSpecs.includes(s) ? '#8B1A1A' : '#E5E7EB',
-                      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-                      marginRight: 8, marginBottom: 8,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: selectedSpecs.includes(s) ? '#fff' : '#414844', textTransform: 'capitalize' }}>
-                      {s}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.label}>Service Areas</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {AREA_OPTIONS.map(a => (
-                  <TouchableOpacity
-                    key={a}
-                    activeOpacity={0.7}
-                    onPress={() => toggleArea(a)}
-                    style={{
-                      backgroundColor: selectedAreas.includes(a) ? '#0077B6' : '#fff',
-                      borderWidth: 1, borderColor: selectedAreas.includes(a) ? '#0077B6' : '#E5E7EB',
-                      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-                      marginRight: 8, marginBottom: 8,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: selectedAreas.includes(a) ? '#fff' : '#414844' }}>
-                      {a}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
 
           <Text style={styles.label}>Password</Text>
           <View style={styles.inputRow}>

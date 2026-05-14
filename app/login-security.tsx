@@ -7,12 +7,14 @@ import { ArrowLeft, Lock } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
+import { useAuthStore } from '../src/stores/authStore';
 import { Button } from '../src/components/ui/Button';
 import { Input } from '../src/components/ui/Input';
 
 export default function LoginSecurityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -20,6 +22,10 @@ export default function LoginSecurityScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleChangePassword = async () => {
+    if (!currentPassword) {
+      Alert.alert('Error', 'Please enter your current password.');
+      return;
+    }
     if (!newPassword || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all password fields.');
       return;
@@ -32,24 +38,41 @@ export default function LoginSecurityScreen() {
       Alert.alert('Error', 'New password and confirmation do not match.');
       return;
     }
+    if (newPassword === currentPassword) {
+      Alert.alert('Error', 'New password must be different from your current password.');
+      return;
+    }
 
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setLoading(false);
+    try {
+      // Verify current password by re-authenticating
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email ?? '',
+        password: currentPassword,
+      });
+      if (signInError) {
+        Alert.alert('Error', 'Current password is incorrect.');
+        return;
+      }
 
-    if (error) {
-      Alert.alert('Error', error.message || 'Failed to update password.');
-    } else {
-      Alert.alert('Success', 'Your password has been changed successfully!', [
-        {
-          text: 'OK', onPress: () => {
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-            router.back();
+      // Update to new password
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to update password.');
+      } else {
+        Alert.alert('Success', 'Your password has been changed successfully!', [
+          {
+            text: 'OK', onPress: () => {
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+              router.back();
+            }
           }
-        }
-      ]);
+        ]);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,6 +114,16 @@ export default function LoginSecurityScreen() {
         </Text>
 
         <View className="bg-surface-container-low border border-outline-variant rounded-[12px] p-4 mb-6">
+          <View className="mb-4">
+            <Input
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="Enter your current password"
+              isPassword
+              leftIcon={<Lock size={18} color="#717973" />}
+            />
+          </View>
           <View className="mb-4">
             <Input
               label="New Password"

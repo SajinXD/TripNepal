@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeScreen } from '@/components/layout/SafeScreen';
 import { Button } from '@/components/ui/Button';
@@ -27,10 +27,12 @@ export default function BookingConfirmScreen() {
     if (!booking) return;
     setChatLoading(true);
     try {
-      // @ts-ignore
+      // Find existing direct thread for this tourist-guide pair
       const { data: existing } = await (supabase.from('chat_threads') as any)
         .select('id')
-        .eq('booking_id', bookingId)
+        .eq('tourist_id', booking.tourist_id)
+        .eq('guide_id', booking.guide_id)
+        .is('booking_id', null)
         .maybeSingle();
 
       if (existing) {
@@ -38,17 +40,16 @@ export default function BookingConfirmScreen() {
         return;
       }
 
-      // Create thread proactively (guide will see it once they accept)
-      // @ts-ignore
-      const { data: newThread } = await (supabase.from('chat_threads') as any)
-        .upsert(
-          { booking_id: bookingId, tourist_id: booking.tourist_id, guide_id: booking.guide_id },
-          { onConflict: 'booking_id', ignoreDuplicates: true }
-        )
+      // Create a new direct thread
+      const { data: newThread, error } = await (supabase.from('chat_threads') as any)
+        .insert({ tourist_id: booking.tourist_id, guide_id: booking.guide_id })
         .select('id')
         .single();
 
+      if (error) throw error;
       if (newThread) router.push(`/chat/${newThread.id}` as any);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not open chat.');
     } finally {
       setChatLoading(false);
     }

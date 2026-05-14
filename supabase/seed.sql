@@ -178,6 +178,7 @@ CREATE TABLE public.guide_profiles (
   acceptance_rate         numeric(5,2),
   price_negotiable        boolean DEFAULT false,
   ntb_license_url         text,
+  ntb_license_status      text DEFAULT 'not_submitted',
   created_at              timestamptz DEFAULT now(),
   updated_at              timestamptz DEFAULT now()
 );

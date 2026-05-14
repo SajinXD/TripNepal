@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
 import {
+	ChevronDown,
 	ChevronRight,
+	ChevronUp,
 	DollarSign,
 	FileText,
 	HelpCircle,
@@ -49,6 +51,8 @@ export default function GuideSettingsScreen() {
 	// NTB License section
 	const [ntbLicenseNumber, setNtbLicenseNumber] = useState('');
 	const [ntbLicenseUrl, setNtbLicenseUrl] = useState<string | null>(null);
+	const [ntbLicenseStatus, setNtbLicenseStatus] = useState<string>('not_submitted');
+	const [ntbExpanded, setNtbExpanded] = useState(false);
 	const [uploadingNtb, setUploadingNtb] = useState(false);
 	const [savingNtb, setSavingNtb] = useState(false);
 
@@ -57,7 +61,7 @@ export default function GuideSettingsScreen() {
 		Promise.all([
 			(supabase.from("guide_profiles") as any)
 				.select(
-					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number, ntb_license_url",
+					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number, ntb_license_url, ntb_license_status",
 				)
 				.eq("id", user.id)
 				.single(),
@@ -73,6 +77,10 @@ export default function GuideSettingsScreen() {
 				setPriceNegotiable(gpData.price_negotiable ?? false);
 				setNtbLicenseNumber(gpData.guide_license_number ?? '');
 				setNtbLicenseUrl(gpData.ntb_license_url ?? null);
+				const status = gpData.ntb_license_status ?? 'not_submitted';
+				setNtbLicenseStatus(status);
+				// Auto-expand form only when not yet submitted
+				setNtbExpanded(status === 'not_submitted');
 			}
 			if (gpData?.is_verified) {
 				setKycStatus("approved");
@@ -113,7 +121,7 @@ export default function GuideSettingsScreen() {
 					.update({ avatar_url: url })
 					.eq("id", user.id);
 				if (error) throw error;
-				updateProfile({ avatar_url: url } as any);
+				updateProfile({ avatar_url: url } as Parameters<typeof updateProfile>[0]);
 				Alert.alert("Success", "Profile picture updated successfully!");
 			}
 		} catch (error: any) {
@@ -160,14 +168,21 @@ export default function GuideSettingsScreen() {
 		if (!user) return;
 		setSavingNtb(true);
 		try {
+			if (!ntbLicenseNumber.trim() && !ntbLicenseUrl) {
+				Alert.alert("Required", "Please enter your license number or upload a photo.");
+				return;
+			}
 			const { error } = await (supabase.from("guide_profiles") as any)
 				.update({
 					guide_license_number: ntbLicenseNumber.trim() || null,
 					ntb_license_url: ntbLicenseUrl,
+					ntb_license_status: 'pending',
 				})
 				.eq("id", user.id);
 			if (error) throw error;
-			Alert.alert("Saved", "NTB license details updated successfully.");
+			setNtbLicenseStatus('pending');
+			setNtbExpanded(false);
+			Alert.alert("Submitted", "Your NTB license is under review. This usually takes 1–2 business days.");
 		} catch (e: any) {
 			Alert.alert("Error", e.message || "Could not save NTB details.");
 		} finally {
@@ -402,55 +417,55 @@ export default function GuideSettingsScreen() {
 
 				{/* KYC Status Banner */}
 				{kycStatus !== "approved" && (
-					<Pressable
-						onPress={() => router.push("/kyc" as any)}
-						style={{
-							backgroundColor:
-								kycStatus === "pending" ? "#FEF3C7" : "#FEE2E2",
-							borderRadius: 12,
-							padding: 14,
-							marginBottom: 24,
-							flexDirection: "row",
-							alignItems: "center",
-						}}
-					>
-						<Shield
-							size={20}
-							color={
-								kycStatus === "pending" ? "#D97706" : "#DC2626"
-							}
-						/>
-						<View style={{ flex: 1, marginLeft: 12 }}>
-							<Text
-								style={{
-									fontWeight: "700",
-									color:
-										kycStatus === "pending"
-											? "#D97706"
-											: "#DC2626",
-									fontSize: 14,
-								}}
-							>
-								{kycStatus === "pending"
-									? "Verification Under Review"
-									: kycStatus === "rejected"
+					kycStatus === "pending" ? (
+						// Non-clickable when under review
+						<View
+							style={{
+								backgroundColor: "#FEF3C7",
+								borderRadius: 12,
+								padding: 14,
+								marginBottom: 24,
+								flexDirection: "row",
+								alignItems: "center",
+							}}
+						>
+							<Shield size={20} color="#D97706" />
+							<View style={{ flex: 1, marginLeft: 12 }}>
+								<Text style={{ fontWeight: "700", color: "#D97706", fontSize: 14 }}>
+									Verification Under Review
+								</Text>
+								<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+									Usually takes 24–48 hours
+								</Text>
+							</View>
+						</View>
+					) : (
+						// Clickable for not_submitted / rejected
+						<Pressable
+							onPress={() => router.push("/kyc" as any)}
+							style={{
+								backgroundColor: "#FEE2E2",
+								borderRadius: 12,
+								padding: 14,
+								marginBottom: 24,
+								flexDirection: "row",
+								alignItems: "center",
+							}}
+						>
+							<Shield size={20} color="#DC2626" />
+							<View style={{ flex: 1, marginLeft: 12 }}>
+								<Text style={{ fontWeight: "700", color: "#DC2626", fontSize: 14 }}>
+									{kycStatus === "rejected"
 										? "Verification Rejected — Resubmit"
 										: "Complete KYC Verification"}
-							</Text>
-							<Text
-								style={{
-									fontSize: 12,
-									color: "#6B7280",
-									marginTop: 2,
-								}}
-							>
-								{kycStatus === "pending"
-									? "Usually takes 24-48 hours"
-									: "Tap to submit your documents"}
-							</Text>
-						</View>
-						<ChevronRight size={18} color="#9CA3AF" />
-					</Pressable>
+								</Text>
+								<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+									Tap to submit your documents
+								</Text>
+							</View>
+							<ChevronRight size={18} color="#9CA3AF" />
+						</Pressable>
+					)
 				)}
 
 				{/* NTB LICENSE */}
@@ -465,89 +480,175 @@ export default function GuideSettingsScreen() {
 				>
 					NTB LICENSE
 				</Text>
+
+				{/* Non-clickable status banner */}
 				<View
 					style={{
-						backgroundColor: "#fff",
-						borderRadius: 16,
-						padding: 16,
-						marginBottom: 24,
-						shadowColor: "#000",
-						shadowOpacity: 0.04,
-						shadowRadius: 4,
-						elevation: 1,
+						backgroundColor:
+							ntbLicenseStatus === "approved" ? "#D1FAE5"
+							: ntbLicenseStatus === "pending" ? "#FEF3C7"
+							: "#F3F4F6",
+						borderRadius: 12,
+						padding: 14,
+						marginBottom: 12,
+						flexDirection: "row",
+						alignItems: "center",
 					}}
 				>
-					<Text style={{ fontSize: 13, color: "#717973", marginBottom: 12 }}>
-						Add your Nepal Tourism Board license to build tourist trust.
-					</Text>
-
-					<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
-						NTB License Number
-					</Text>
-					<TextInput
-						value={ntbLicenseNumber}
-						onChangeText={setNtbLicenseNumber}
-						placeholder="e.g. NTB-2024-12345"
-						placeholderTextColor="#9CA3AF"
-						style={{
-							borderWidth: 1,
-							borderColor: "#E5E7EB",
-							borderRadius: 10,
-							paddingHorizontal: 14,
-							paddingVertical: 10,
-							fontSize: 14,
-							color: "#1A1C1E",
-							marginBottom: 12,
-						}}
+					<Shield
+						size={20}
+						color={
+							ntbLicenseStatus === "approved" ? "#059669"
+							: ntbLicenseStatus === "pending" ? "#D97706"
+							: "#6B7280"
+						}
 					/>
-
-					<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
-						License Photo
-					</Text>
-					<TouchableOpacity
-						onPress={handleNtbPhotoUpload}
-						disabled={uploadingNtb}
-						style={{
-							borderWidth: 2,
-							borderStyle: "dashed",
-							borderColor: ntbLicenseUrl ? "#8B1A1A" : "#D1D5DB",
-							borderRadius: 10,
-							padding: 16,
-							alignItems: "center",
-							backgroundColor: ntbLicenseUrl ? "#FFF5F5" : "#FAFAFA",
-							marginBottom: 14,
-						}}
-					>
-						{uploadingNtb ? (
-							<ActivityIndicator color="#8B1A1A" />
-						) : ntbLicenseUrl ? (
-							<FileCheck size={24} color="#8B1A1A" />
-						) : (
-							<Upload size={24} color="#9CA3AF" />
-						)}
-						<Text style={{ fontSize: 13, color: ntbLicenseUrl ? "#8B1A1A" : "#9CA3AF", marginTop: 6, fontWeight: "600" }}>
-							{ntbLicenseUrl ? "License Photo Uploaded ✓" : "Upload License Photo"}
+					<View style={{ flex: 1, marginLeft: 12 }}>
+						<Text
+							style={{
+								fontWeight: "700",
+								fontSize: 14,
+								color:
+									ntbLicenseStatus === "approved" ? "#059669"
+									: ntbLicenseStatus === "pending" ? "#D97706"
+									: "#6B7280",
+							}}
+						>
+							{ntbLicenseStatus === "approved"
+								? "License Verified ✓"
+								: ntbLicenseStatus === "pending"
+									? "Pending Verification"
+									: "NTB License Not Submitted"}
 						</Text>
-					</TouchableOpacity>
+						<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+							{ntbLicenseStatus === "approved"
+								? "Your NTB license has been verified."
+								: ntbLicenseStatus === "pending"
+									? "Usually takes 1–2 business days."
+									: "Submit your license to build tourist trust."}
+						</Text>
+					</View>
+				</View>
 
+				{/* Accordion toggle — hidden when approved */}
+				{ntbLicenseStatus !== "approved" && (
 					<TouchableOpacity
-						onPress={handleSaveNtb}
-						disabled={savingNtb}
+						onPress={() => setNtbExpanded(!ntbExpanded)}
 						style={{
-							backgroundColor: "#8B1A1A",
-							borderRadius: 10,
-							paddingVertical: 12,
+							backgroundColor: "#fff",
+							borderRadius: 12,
+							padding: 14,
+							marginBottom: ntbExpanded ? 0 : 24,
+							flexDirection: "row",
 							alignItems: "center",
-							opacity: savingNtb ? 0.6 : 1,
+							shadowColor: "#000",
+							shadowOpacity: 0.04,
+							shadowRadius: 4,
+							elevation: 1,
+							borderBottomLeftRadius: ntbExpanded ? 0 : 12,
+							borderBottomRightRadius: ntbExpanded ? 0 : 12,
+						}}
+						activeOpacity={0.7}
+					>
+						<FileCheck size={18} color="#8B1A1A" />
+						<Text style={{ flex: 1, marginLeft: 10, fontSize: 15, fontWeight: "600", color: "#1A1C1E" }}>
+							{ntbLicenseStatus === "pending" ? "View / Update License" : "Add NTB License"}
+						</Text>
+						{ntbExpanded
+							? <ChevronUp size={18} color="#9CA3AF" />
+							: <ChevronDown size={18} color="#9CA3AF" />
+						}
+					</TouchableOpacity>
+				)}
+
+				{/* Collapsible form */}
+				{ntbExpanded && ntbLicenseStatus !== "approved" && (
+					<View
+						style={{
+							backgroundColor: "#fff",
+							borderTopWidth: 1,
+							borderTopColor: "#F3F4F6",
+							borderBottomLeftRadius: 12,
+							borderBottomRightRadius: 12,
+							padding: 16,
+							marginBottom: 24,
+							shadowColor: "#000",
+							shadowOpacity: 0.04,
+							shadowRadius: 4,
+							elevation: 1,
 						}}
 					>
-						{savingNtb ? (
-							<ActivityIndicator color="#fff" />
-						) : (
-							<Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Save NTB Details</Text>
-						)}
-					</TouchableOpacity>
-				</View>
+						<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+							NTB License Number
+						</Text>
+						<TextInput
+							value={ntbLicenseNumber}
+							onChangeText={setNtbLicenseNumber}
+							placeholder="e.g. NTB-2024-12345"
+							placeholderTextColor="#9CA3AF"
+							style={{
+								borderWidth: 1,
+								borderColor: "#E5E7EB",
+								borderRadius: 10,
+								paddingHorizontal: 14,
+								paddingVertical: 10,
+								fontSize: 14,
+								color: "#1A1C1E",
+								marginBottom: 12,
+							}}
+						/>
+
+						<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+							License Photo
+						</Text>
+						<TouchableOpacity
+							onPress={handleNtbPhotoUpload}
+							disabled={uploadingNtb}
+							style={{
+								borderWidth: 2,
+								borderStyle: "dashed",
+								borderColor: ntbLicenseUrl ? "#8B1A1A" : "#D1D5DB",
+								borderRadius: 10,
+								padding: 16,
+								alignItems: "center",
+								backgroundColor: ntbLicenseUrl ? "#FFF5F5" : "#FAFAFA",
+								marginBottom: 14,
+							}}
+						>
+							{uploadingNtb ? (
+								<ActivityIndicator color="#8B1A1A" />
+							) : ntbLicenseUrl ? (
+								<FileCheck size={24} color="#8B1A1A" />
+							) : (
+								<Upload size={24} color="#9CA3AF" />
+							)}
+							<Text style={{ fontSize: 13, color: ntbLicenseUrl ? "#8B1A1A" : "#9CA3AF", marginTop: 6, fontWeight: "600" }}>
+								{ntbLicenseUrl ? "License Photo Uploaded ✓" : "Upload License Photo"}
+							</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							onPress={handleSaveNtb}
+							disabled={savingNtb}
+							style={{
+								backgroundColor: "#8B1A1A",
+								borderRadius: 10,
+								paddingVertical: 12,
+								alignItems: "center",
+								opacity: savingNtb ? 0.6 : 1,
+							}}
+						>
+							{savingNtb ? (
+								<ActivityIndicator color="#fff" />
+							) : (
+								<Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Submit for Verification</Text>
+							)}
+						</TouchableOpacity>
+					</View>
+				)}
+
+				{/* Spacer when approved and form hidden */}
+				{ntbLicenseStatus === "approved" && <View style={{ marginBottom: 24 }} />}
 
 				{/* PRICING */}
 				<Text

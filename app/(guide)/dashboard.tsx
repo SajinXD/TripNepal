@@ -111,15 +111,6 @@ export default function GuideDashboardScreen() {
 
       if (error) throw error;
 
-      if (accept) {
-        // Create chat thread so tourist can message guide
-        // @ts-ignore
-        await (supabase.from('chat_threads') as any).upsert(
-          { booking_id: bookingId },
-          { onConflict: 'booking_id', ignoreDuplicates: true }
-        );
-      }
-
       await loadBookings();
       await loadStats();
       Alert.alert(accept ? 'Accepted!' : 'Declined', accept ? 'Booking accepted. The tourist has been notified.' : 'Booking declined.');

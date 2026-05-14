@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, ImageBackground, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, DollarSign, Home as HomeIcon, ChevronRight, Bookmark, BookmarkCheck, Trees, Landmark, Users } from 'lucide-react-native';
+import { MapPin, DollarSign, Home as HomeIcon, Bookmark, BookmarkCheck, Trees, Landmark, Users } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Card } from '../../src/components/ui/Card';
 import { RatingPill } from '../../src/components/ui/RatingPill';
@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [fxRate, setFxRate] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [lodgeCount, setLodgeCount] = useState<number>(428);
+  const [lodgeCount, setLodgeCount] = useState<number>(0);
   const [guideCount, setGuideCount] = useState<number>(0);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
@@ -77,6 +77,27 @@ export default function HomeScreen() {
       .select('id', { count: 'exact', head: true })
       .eq('is_verified', true);
     if (gCount) setGuideCount(gCount);
+
+    // Lodge count — query stays table if it exists, else destinations count
+    try {
+      const { count: lCount, error: lErr } = await (supabase.from('stays') as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true);
+      if (!lErr && lCount !== null) setLodgeCount(lCount);
+      else {
+        const { count: dCount } = await supabase
+          .from('destinations')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true);
+        if (dCount !== null) setLodgeCount(dCount);
+      }
+    } catch {
+      const { count: dCount } = await supabase
+        .from('destinations')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true);
+      if (dCount !== null) setLodgeCount(dCount);
+    }
 
     // FX rate
     try {
@@ -207,7 +228,7 @@ export default function HomeScreen() {
                 <HomeIcon size={18} color="#0077B6" />
                 <View>
                   <Text style={{ fontWeight: '600', fontSize: 13, color: '#0077B6' }}>Lodges</Text>
-                  <Text style={{ fontWeight: '800', fontSize: 20, color: '#0077B6', marginTop: 2 }}>{lodgeCount}</Text>
+                  <Text style={{ fontWeight: '800', fontSize: 20, color: '#0077B6', marginTop: 2 }}>{lodgeCount > 0 ? lodgeCount : '—'}</Text>
                   <Text style={{ fontSize: 9, color: '#717973', marginTop: 1 }}>Stays & rentals</Text>
                 </View>
               </View>
