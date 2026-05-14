@@ -26,12 +26,14 @@ export default function NewBookingScreen() {
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
 
   const areaMap: Record<string, number> = guide?.area_prices ?? {};
-  const hasAreaPricing = Object.keys(areaMap).length > 0;
+  const guideAreas: string[] = guide?.service_areas ?? [];
+  const showAreaPicker = guideAreas.length > 0;
 
-  // Sum of selected area daily rates; fallback to price_per_day when no per-area data
-  const baseRatePerDay = hasAreaPricing
-    ? selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? 0), 0)
-    : (guide?.price_per_day ?? 3500);
+  // Sum of selected area rates; per-area price if set, else guide's daily rate per area
+  const fallbackRate = guide?.price_per_day ?? 3500;
+  const baseRatePerDay = showAreaPicker && selectedAreas.length > 0
+    ? selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? fallbackRate), 0)
+    : fallbackRate;
   const subtotal = parseInt(days || '0') * baseRatePerDay;
   const serviceFee = Math.round(subtotal * 0.05);
   const total = subtotal + serviceFee;
@@ -63,7 +65,7 @@ export default function NewBookingScreen() {
       Alert.alert('Error', 'No guide selected.');
       return;
     }
-    if (hasAreaPricing && selectedAreas.length === 0) {
+    if (showAreaPicker && selectedAreas.length === 0) {
       Alert.alert('Select Area', 'Please select at least one service area to continue.');
       return;
     }
@@ -155,7 +157,7 @@ export default function NewBookingScreen() {
           ) : null}
 
           {/* Area Picker — only when guide has per-area pricing */}
-          {!loadingGuide && hasAreaPricing && (guide?.service_areas ?? []).length > 0 && (
+          {!loadingGuide && showAreaPicker && (guide?.service_areas ?? []).length > 0 && (
             <View className="mb-5">
               <Text className="font-semibold text-sm text-text mb-2">
                 Select Areas <Text className="font-normal text-text-muted">(tap all you'll visit)</Text>
@@ -293,7 +295,7 @@ export default function NewBookingScreen() {
             <Text className="font-semibold text-text mb-4">Price Summary</Text>
 
             {/* Per-area breakdown */}
-            {hasAreaPricing && selectedAreas.length > 0 && selectedAreas.map(area => (
+            {showAreaPicker && selectedAreas.length > 0 && selectedAreas.map(area => (
               <View key={area} className="flex-row justify-between mb-1">
                 <Text className="text-text-secondary text-xs">{area}</Text>
                 <Text className="text-text text-xs">रू {(areaMap[area] ?? 0).toLocaleString()}/day</Text>

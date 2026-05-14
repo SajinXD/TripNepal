@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../src/hooks/useAuth';
 import { Search, MapPin, MessageSquare, Star, SlidersHorizontal, X } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Card } from '../../src/components/ui/Card';
@@ -50,6 +51,7 @@ const ALL_SPECS = [
 export default function FindGuideScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,6 +147,30 @@ export default function FindGuideScreen() {
   useEffect(() => {
     loadGuides(true);
   }, [activeFilter]);
+
+  async function handleMessageGuide(guideId: string) {
+    if (!user) return;
+    try {
+      const { data: existing } = await (supabase.from('chat_threads') as any)
+        .select('id')
+        .eq('tourist_id', user.id)
+        .eq('guide_id', guideId)
+        .is('booking_id', null)
+        .maybeSingle();
+      if (existing) {
+        router.push(`/chat/${existing.id}` as any);
+        return;
+      }
+      const { data: thread, error } = await (supabase.from('chat_threads') as any)
+        .insert({ tourist_id: user.id, guide_id: guideId })
+        .select('id')
+        .single();
+      if (error) throw error;
+      router.push(`/chat/${thread.id}` as any);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not open chat.');
+    }
+  }
 
   const handleSearch = () => loadGuides(true);
 
@@ -314,7 +340,7 @@ export default function FindGuideScreen() {
                   variant="secondary"
                   className="flex-1 ml-2 h-[44px]"
                   leftIcon={<MessageSquare size={16} color="#0077B6" />}
-                  onPress={() => { router.push(`/booking/new?guideId=${guide.id}` as any); }}
+                  onPress={() => handleMessageGuide(guide.id)}
                 >
                   Message
                 </Button>
