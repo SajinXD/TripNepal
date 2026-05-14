@@ -68,7 +68,7 @@ CREATE TYPE public.user_role      AS ENUM ('tourist', 'guide', 'admin');
 CREATE TYPE public.kyc_status     AS ENUM ('not_submitted', 'pending', 'approved', 'rejected', 'resubmit');
 CREATE TYPE public.booking_status AS ENUM ('requested', 'accepted', 'rejected', 'in_progress', 'completed', 'cancelled');
 CREATE TYPE public.payment_status AS ENUM ('pending', 'held', 'released', 'refunded', 'failed');
-CREATE TYPE public.trip_category  AS ENUM ('trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing', 'food', 'photography');
+CREATE TYPE public.trip_category  AS ENUM ('trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing', 'food', 'photography', 'local', 'other');
 CREATE TYPE public.document_type  AS ENUM ('citizenship', 'passport', 'driving_license', 'guide_license', 'selfie');
 
 -- ============================================================================
@@ -176,6 +176,8 @@ CREATE TABLE public.guide_profiles (
   total_earnings          numeric(12,2) DEFAULT 0,
   response_time_minutes   int,
   acceptance_rate         numeric(5,2),
+  price_negotiable        boolean DEFAULT false,
+  ntb_license_url         text,
   created_at              timestamptz DEFAULT now(),
   updated_at              timestamptz DEFAULT now()
 );
@@ -345,6 +347,8 @@ CREATE TABLE public.chat_threads (
 );
 CREATE INDEX idx_chat_threads_tourist ON public.chat_threads(tourist_id);
 CREATE INDEX idx_chat_threads_guide   ON public.chat_threads(guide_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_threads_tourist_guide_no_booking
+  ON public.chat_threads (tourist_id, guide_id) WHERE booking_id IS NULL;
 
 -- CHAT MESSAGES
 CREATE TABLE public.chat_messages (
@@ -605,7 +609,7 @@ CREATE POLICY "chat_requests_tourist_delete" ON public.chat_requests FOR DELETE 
 -- CHAT THREADS
 CREATE POLICY "chat_threads_participant"    ON public.chat_threads FOR ALL TO authenticated
   USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
-CREATE POLICY "chat_threads_guide_insert"   ON public.chat_threads FOR INSERT TO authenticated WITH CHECK (guide_id = auth.uid());
+CREATE POLICY "chat_threads_insert"         ON public.chat_threads FOR INSERT TO authenticated WITH CHECK (guide_id = auth.uid() OR tourist_id = auth.uid());
 
 -- CHAT MESSAGES
 CREATE POLICY "chat_messages_read_participant" ON public.chat_messages FOR SELECT TO authenticated

@@ -6,14 +6,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft, Star, MapPin, Languages, Briefcase, MessageSquare,
-  TrendingUp, Award, Calendar, X, Send, Clock,
+  TrendingUp, Award, Calendar, X,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/lib/supabase';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useAuth } from '../../src/hooks/useAuth';
-
-type RequestStatus = 'none' | 'pending' | 'accepted' | 'rejected';
 
 type Guide = {
   id: string;
@@ -21,12 +19,14 @@ type Guide = {
   bio_guide?: string;
   years_of_experience?: number;
   price_per_day?: number;
+  price_negotiable?: boolean;
   specializations?: string[];
   service_areas?: string[];
   languages_spoken?: string[];
   average_rating?: number;
   total_reviews?: number;
   total_trips?: number;
+  total_trips_completed?: number;
   is_verified?: boolean;
   profiles?: { full_name: string; avatar_url: string | null; email: string | null };
 };
@@ -58,10 +58,8 @@ export default function GuideDetailScreen() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [requestStatus, setRequestStatus] = useState<RequestStatus>('none');
-  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
-  const [requestLoading, setRequestLoading] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [perfStats, setPerfStats] = useState({ responseRate: 100, completionRate: 100 });
 
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -85,44 +83,59 @@ export default function GuideDetailScreen() {
       if (g) setGuide(g);
       if (r) setReviews(r);
 
-      // Check existing chat request (tourist only)
-      if (user && user.id !== id) {
-        const { data: req } = await (supabase.from('chat_requests') as any)
+      // Calculate performance stats from bookings
+      const [{ data: bkReqs }, { data: bkAll }] = await Promise.all([
+        (supabase.from('bookings') as any)
           .select('status')
-          .eq('tourist_id', user.id)
           .eq('guide_id', id)
-          .maybeSingle();
+          .in('status', ['requested', 'accepted', 'rejected', 'in_progress', 'completed', 'cancelled']),
+        (supabase.from('bookings') as any)
+          .select('status')
+          .eq('guide_id', id)
+          .in('status', ['accepted', 'in_progress', 'completed']),
+      ]);
+      const totalReqs = bkReqs?.length ?? 0;
+      const responded = (bkReqs || []).filter((b: any) => b.status !== 'requested').length;
+      const responseRate = totalReqs > 0 ? Math.round((responded / totalReqs) * 100) : 100;
+      const totalActive = bkAll?.length ?? 0;
+      const completedCount = (bkAll || []).filter((b: any) => b.status === 'completed').length;
+      const completionRate = totalActive > 0 ? Math.round((completedCount / totalActive) * 100) : 100;
+      setPerfStats({ responseRate, completionRate });
 
-        if (req) {
-          setRequestStatus(req.status as RequestStatus);
-          if (req.status === 'accepted') {
-            const { data: thread } = await (supabase.from('chat_threads') as any)
-              .select('id')
-              .eq('tourist_id', user.id)
-              .eq('guide_id', id)
-              .maybeSingle();
-            if (thread) setChatThreadId(thread.id);
-          }
-        }
-      }
       setLoading(false);
     }
     if (id) load();
   }, [id, user]);
 
-  async function sendRequest() {
-    if (!user) { Alert.alert('Sign in required', 'Please sign in to connect with this guide.'); return; }
-    setRequestLoading(true);
-    const { error } = await (supabase.from('chat_requests') as any).upsert(
-      { tourist_id: user.id, guide_id: id, status: 'pending' },
-      { onConflict: 'tourist_id,guide_id' }
-    );
-    setRequestLoading(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      setRequestStatus('pending');
-      Alert.alert('Request Sent!', `Your request to connect with ${guide?.profiles?.full_name?.split(' ')[0] || 'the guide'} has been sent. They'll be notified shortly.`);
+  async function openDirectChat() {
+    if (!user) { Alert.alert('Sign in required', 'Please sign in to message this guide.'); return; }
+    setMessageLoading(true);
+    try {
+      // Find existing thread for this tourist+guide pair
+      const { data: existing } = await (supabase.from('chat_threads') as any)
+        .select('id')
+        .eq('tourist_id', user.id)
+        .eq('guide_id', id)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        router.push(`/chat/${existing.id}` as any);
+        return;
+      }
+
+      // Create new thread
+      const { data: thread, error } = await (supabase.from('chat_threads') as any)
+        .insert({ tourist_id: user.id, guide_id: id })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      router.push(`/chat/${thread.id}` as any);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not open chat.');
+    } finally {
+      setMessageLoading(false);
     }
   }
 
@@ -130,7 +143,6 @@ export default function GuideDetailScreen() {
     if (!user) { Alert.alert('Sign in required'); return; }
     setSubmitting(true);
     try {
-      // Find a completed booking between this tourist and guide (required by schema)
       const { data: completedBooking } = await (supabase.from('bookings') as any)
         .select('id')
         .eq('tourist_id', user.id)
@@ -140,10 +152,7 @@ export default function GuideDetailScreen() {
         .maybeSingle();
 
       if (!completedBooking) {
-        Alert.alert(
-          'Trip Required',
-          'You can only leave a review after completing a trip with this guide.'
-        );
+        Alert.alert('Trip Required', 'You can only leave a review after completing a trip with this guide.');
         setSubmitting(false);
         return;
       }
@@ -163,7 +172,6 @@ export default function GuideDetailScreen() {
         setReviewModal(false);
         setReviewText('');
         setReviewRating(5);
-        // Reload reviews list and guide profile (triggers update average_rating + total_reviews)
         const [{ data: r }, { data: freshGuide }] = await Promise.all([
           (supabase.from('reviews') as any)
             .select('*, profiles!reviewer_id(full_name)')
@@ -204,7 +212,6 @@ export default function GuideDetailScreen() {
   }
 
   const name = guide.profiles?.full_name || 'Guide';
-  const initial = name.charAt(0).toUpperCase();
   const rating = guide.average_rating ?? 0;
   const totalReviews = guide.total_reviews ?? reviews.length;
 
@@ -266,6 +273,21 @@ export default function GuideDetailScreen() {
               </Text>
               <Text style={styles.statLbl}>Per Day</Text>
             </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statCell}>
+              <View style={{
+                backgroundColor: guide.price_negotiable ? '#FEF3C7' : '#F3F4F6',
+                borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3,
+              }}>
+                <Text style={{
+                  fontSize: 9, fontWeight: '700',
+                  color: guide.price_negotiable ? '#D97706' : '#6B7280',
+                }}>
+                  {guide.price_negotiable ? 'NEGOTIABLE' : 'FIXED PRICE'}
+                </Text>
+              </View>
+              <Text style={styles.statLbl}>Pricing</Text>
+            </View>
           </View>
 
           {/* Specializations */}
@@ -318,6 +340,25 @@ export default function GuideDetailScreen() {
             </Text>
           </View>
 
+          {/* Performance */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Performance</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={[styles.perfCard, { flex: 1 }]}>
+                <Text style={styles.perfVal}>{guide.total_trips_completed ?? 0}</Text>
+                <Text style={styles.perfLbl}>Trips Done</Text>
+              </View>
+              <View style={[styles.perfCard, { flex: 1 }]}>
+                <Text style={styles.perfVal}>{perfStats.responseRate}%</Text>
+                <Text style={styles.perfLbl}>Response Rate</Text>
+              </View>
+              <View style={[styles.perfCard, { flex: 1 }]}>
+                <Text style={styles.perfVal}>{perfStats.completionRate}%</Text>
+                <Text style={styles.perfLbl}>Completion</Text>
+              </View>
+            </View>
+          </View>
+
           {/* Reviews */}
           <View style={styles.section}>
             <View style={{ marginBottom: 12 }}>
@@ -355,7 +396,7 @@ export default function GuideDetailScreen() {
       <View style={[styles.cta, { paddingBottom: insets.bottom + 12 }]}>
         {user?.id !== id && (
           <View style={{ width: '100%' }}>
-            {/* Row 1: Book Now + Connect/Message */}
+            {/* Row 1: Book Now + Message Guide */}
             <View style={{ flexDirection: 'row', marginBottom: 10 }}>
               <TouchableOpacity
                 style={[styles.ctaBtn, { backgroundColor: '#8B1A1A', marginRight: 8 }]}
@@ -365,41 +406,20 @@ export default function GuideDetailScreen() {
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Book Now</Text>
               </TouchableOpacity>
 
-              {requestStatus === 'accepted' && chatThreadId ? (
-                <TouchableOpacity
-                  style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6 }]}
-                  activeOpacity={0.8}
-                  onPress={() => router.push(`/chat/${chatThreadId}` as any)}
-                >
-                  <MessageSquare size={18} color="#0077B6" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>Message</Text>
-                </TouchableOpacity>
-              ) : requestStatus === 'pending' ? (
-                <TouchableOpacity
-                  style={[styles.ctaBtn, { backgroundColor: '#F3F4F6', flex: 0.6 }]}
-                  disabled
-                >
-                  <Clock size={16} color="#9CA3AF" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#9CA3AF', fontWeight: '700', fontSize: 14 }}>Request Sent</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6, opacity: requestLoading ? 0.6 : 1 }]}
-                  activeOpacity={0.8}
-                  onPress={sendRequest}
-                  disabled={requestLoading}
-                >
-                  {requestLoading
-                    ? <ActivityIndicator size="small" color="#0077B6" />
-                    : <>
-                        <Send size={16} color="#0077B6" style={{ marginRight: 6 }} />
-                        <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>
-                          {requestStatus === 'rejected' ? 'Send Again' : 'Send Request'}
-                        </Text>
-                      </>
-                  }
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.ctaBtn, { backgroundColor: '#E1F0FF', flex: 0.6, opacity: messageLoading ? 0.6 : 1 }]}
+                activeOpacity={0.8}
+                onPress={openDirectChat}
+                disabled={messageLoading}
+              >
+                {messageLoading
+                  ? <ActivityIndicator size="small" color="#0077B6" />
+                  : <>
+                      <MessageSquare size={16} color="#0077B6" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#0077B6', fontWeight: '700', fontSize: 15 }}>Message</Text>
+                    </>
+                }
+              </TouchableOpacity>
             </View>
 
             {/* Row 2: Find Another Guide */}
@@ -491,9 +511,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   statCell: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, backgroundColor: '#F3F4F6', marginHorizontal: 8 },
-  statVal: { fontWeight: '700', fontSize: 14, color: '#1A1C1E', marginTop: 4 },
-  statLbl: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  statDivider: { width: 1, backgroundColor: '#F3F4F6', marginHorizontal: 4 },
+  statVal: { fontWeight: '700', fontSize: 13, color: '#1A1C1E', marginTop: 4 },
+  statLbl: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
   section: { marginBottom: 20 },
   sectionTitle: { fontWeight: '700', fontSize: 16, color: '#1A1C1E', marginBottom: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -507,10 +527,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  writeReviewBtn: {
-    backgroundColor: '#FFF0ED', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-  },
-  writeReviewText: { fontSize: 12, fontWeight: '700', color: '#8B1A1A' },
   cta: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', paddingHorizontal: 20, paddingTop: 12,
@@ -533,5 +549,14 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     backgroundColor: '#8B1A1A', borderRadius: 12, alignItems: 'center', paddingVertical: 14,
+  },
+  perfCard: {
+    backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, alignItems: 'center',
+  },
+  perfVal: {
+    fontSize: 20, fontWeight: '700', color: '#8B1A1A', marginBottom: 2,
+  },
+  perfLbl: {
+    fontSize: 11, color: '#717973', textAlign: 'center',
   },
 });

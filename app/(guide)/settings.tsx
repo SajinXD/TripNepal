@@ -7,6 +7,8 @@ import {
 	LogOut,
 	Pencil,
 	Shield,
+	Upload,
+	FileCheck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,7 +16,10 @@ import {
 	Alert,
 	Pressable,
 	ScrollView,
+	Switch,
 	Text,
+	TextInput,
+	TouchableOpacity,
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,12 +42,22 @@ export default function GuideSettingsScreen() {
 	const [kycStatus, setKycStatus] = useState<string>("not_submitted");
 	const [loading, setLoading] = useState(true);
 
+	// Negotiable toggle
+	const [priceNegotiable, setPriceNegotiable] = useState(false);
+	const [savingNegotiable, setSavingNegotiable] = useState(false);
+
+	// NTB License section
+	const [ntbLicenseNumber, setNtbLicenseNumber] = useState('');
+	const [ntbLicenseUrl, setNtbLicenseUrl] = useState<string | null>(null);
+	const [uploadingNtb, setUploadingNtb] = useState(false);
+	const [savingNtb, setSavingNtb] = useState(false);
+
 	useEffect(() => {
 		if (!user?.id) return;
 		Promise.all([
 			(supabase.from("guide_profiles") as any)
 				.select(
-					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas",
+					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number, ntb_license_url",
 				)
 				.eq("id", user.id)
 				.single(),
@@ -51,9 +66,14 @@ export default function GuideSettingsScreen() {
 				.select("status")
 				.eq("user_id", user.id)
 				.single(),
-		]).then(([gp, kyc]) => {
+		]).then(([gp, kyc]: [any, any]) => {
 			const gpData = gp.data;
-			if (gpData) setGuideProfile(gpData);
+			if (gpData) {
+				setGuideProfile(gpData);
+				setPriceNegotiable(gpData.price_negotiable ?? false);
+				setNtbLicenseNumber(gpData.guide_license_number ?? '');
+				setNtbLicenseUrl(gpData.ntb_license_url ?? null);
+			}
 			if (gpData?.is_verified) {
 				setKycStatus("approved");
 			} else if (
@@ -61,6 +81,8 @@ export default function GuideSettingsScreen() {
 				kyc.data.status !== "not_submitted"
 			) {
 				setKycStatus(kyc.data.status);
+			} else if (gpData?.price_per_day) {
+				setKycStatus("pending");
 			}
 			setLoading(false);
 		});
@@ -91,7 +113,7 @@ export default function GuideSettingsScreen() {
 					.update({ avatar_url: url })
 					.eq("id", user.id);
 				if (error) throw error;
-				updateProfile({ avatar_url: url });
+				updateProfile({ avatar_url: url } as any);
 				Alert.alert("Success", "Profile picture updated successfully!");
 			}
 		} catch (error: any) {
@@ -101,6 +123,55 @@ export default function GuideSettingsScreen() {
 			);
 		} finally {
 			setUploadingAvatar(false);
+		}
+	};
+
+	const handleNegotiableToggle = async (value: boolean) => {
+		if (!user) return;
+		setPriceNegotiable(value);
+		setSavingNegotiable(true);
+		try {
+			const { error } = await (supabase.from("guide_profiles") as any)
+				.update({ price_negotiable: value })
+				.eq("id", user.id);
+			if (error) throw error;
+		} catch (e: any) {
+			Alert.alert("Error", e.message || "Could not update pricing setting.");
+			setPriceNegotiable(!value);
+		} finally {
+			setSavingNegotiable(false);
+		}
+	};
+
+	const handleNtbPhotoUpload = async () => {
+		if (!user) return;
+		setUploadingNtb(true);
+		try {
+			const url = await pickAndUploadImage('kyc-documents', user.id);
+			if (url) setNtbLicenseUrl(url);
+		} catch (e: any) {
+			Alert.alert("Upload Failed", e.message || "Could not upload license photo.");
+		} finally {
+			setUploadingNtb(false);
+		}
+	};
+
+	const handleSaveNtb = async () => {
+		if (!user) return;
+		setSavingNtb(true);
+		try {
+			const { error } = await (supabase.from("guide_profiles") as any)
+				.update({
+					guide_license_number: ntbLicenseNumber.trim() || null,
+					ntb_license_url: ntbLicenseUrl,
+				})
+				.eq("id", user.id);
+			if (error) throw error;
+			Alert.alert("Saved", "NTB license details updated successfully.");
+		} catch (e: any) {
+			Alert.alert("Error", e.message || "Could not save NTB details.");
+		} finally {
+			setSavingNtb(false);
 		}
 	};
 
@@ -329,7 +400,7 @@ export default function GuideSettingsScreen() {
 					)}
 				</View>
 
-				{/* KYC Status */}
+				{/* KYC Status Banner */}
 				{kycStatus !== "approved" && (
 					<Pressable
 						onPress={() => router.push("/kyc" as any)}
@@ -382,7 +453,151 @@ export default function GuideSettingsScreen() {
 					</Pressable>
 				)}
 
-				{/* Account */}
+				{/* NTB LICENSE */}
+				<Text
+					style={{
+						fontSize: 11,
+						fontWeight: "700",
+						color: "#717973",
+						letterSpacing: 1.2,
+						marginBottom: 10,
+					}}
+				>
+					NTB LICENSE
+				</Text>
+				<View
+					style={{
+						backgroundColor: "#fff",
+						borderRadius: 16,
+						padding: 16,
+						marginBottom: 24,
+						shadowColor: "#000",
+						shadowOpacity: 0.04,
+						shadowRadius: 4,
+						elevation: 1,
+					}}
+				>
+					<Text style={{ fontSize: 13, color: "#717973", marginBottom: 12 }}>
+						Add your Nepal Tourism Board license to build tourist trust.
+					</Text>
+
+					<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+						NTB License Number
+					</Text>
+					<TextInput
+						value={ntbLicenseNumber}
+						onChangeText={setNtbLicenseNumber}
+						placeholder="e.g. NTB-2024-12345"
+						placeholderTextColor="#9CA3AF"
+						style={{
+							borderWidth: 1,
+							borderColor: "#E5E7EB",
+							borderRadius: 10,
+							paddingHorizontal: 14,
+							paddingVertical: 10,
+							fontSize: 14,
+							color: "#1A1C1E",
+							marginBottom: 12,
+						}}
+					/>
+
+					<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+						License Photo
+					</Text>
+					<TouchableOpacity
+						onPress={handleNtbPhotoUpload}
+						disabled={uploadingNtb}
+						style={{
+							borderWidth: 2,
+							borderStyle: "dashed",
+							borderColor: ntbLicenseUrl ? "#8B1A1A" : "#D1D5DB",
+							borderRadius: 10,
+							padding: 16,
+							alignItems: "center",
+							backgroundColor: ntbLicenseUrl ? "#FFF5F5" : "#FAFAFA",
+							marginBottom: 14,
+						}}
+					>
+						{uploadingNtb ? (
+							<ActivityIndicator color="#8B1A1A" />
+						) : ntbLicenseUrl ? (
+							<FileCheck size={24} color="#8B1A1A" />
+						) : (
+							<Upload size={24} color="#9CA3AF" />
+						)}
+						<Text style={{ fontSize: 13, color: ntbLicenseUrl ? "#8B1A1A" : "#9CA3AF", marginTop: 6, fontWeight: "600" }}>
+							{ntbLicenseUrl ? "License Photo Uploaded ✓" : "Upload License Photo"}
+						</Text>
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						onPress={handleSaveNtb}
+						disabled={savingNtb}
+						style={{
+							backgroundColor: "#8B1A1A",
+							borderRadius: 10,
+							paddingVertical: 12,
+							alignItems: "center",
+							opacity: savingNtb ? 0.6 : 1,
+						}}
+					>
+						{savingNtb ? (
+							<ActivityIndicator color="#fff" />
+						) : (
+							<Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Save NTB Details</Text>
+						)}
+					</TouchableOpacity>
+				</View>
+
+				{/* PRICING */}
+				<Text
+					style={{
+						fontSize: 11,
+						fontWeight: "700",
+						color: "#717973",
+						letterSpacing: 1.2,
+						marginBottom: 10,
+					}}
+				>
+					PRICING
+				</Text>
+				<View
+					style={{
+						backgroundColor: "#fff",
+						borderRadius: 16,
+						padding: 16,
+						marginBottom: 24,
+						shadowColor: "#000",
+						shadowOpacity: 0.04,
+						shadowRadius: 4,
+						elevation: 1,
+					}}
+				>
+					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+						<View style={{ flex: 1, marginRight: 12 }}>
+							<Text style={{ fontSize: 15, fontWeight: "600", color: "#1A1C1E" }}>
+								Price Negotiable
+							</Text>
+							<Text style={{ fontSize: 12, color: "#717973", marginTop: 2 }}>
+								{priceNegotiable
+									? "Tourists can negotiate your daily rate"
+									: "Your rate is fixed — no negotiation"}
+							</Text>
+						</View>
+						{savingNegotiable ? (
+							<ActivityIndicator color="#8B1A1A" size="small" />
+						) : (
+							<Switch
+								value={priceNegotiable}
+								onValueChange={handleNegotiableToggle}
+								trackColor={{ false: "#E5E7EB", true: "#8B1A1A" }}
+								thumbColor="#fff"
+							/>
+						)}
+					</View>
+				</View>
+
+				{/* ACCOUNT */}
 				<Text
 					style={{
 						fontSize: 11,
@@ -478,7 +693,7 @@ export default function GuideSettingsScreen() {
 					</Pressable>
 				</View>
 
-				{/* Support */}
+				{/* SUPPORT */}
 				<Text
 					style={{
 						fontSize: 11,

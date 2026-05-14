@@ -3,11 +3,12 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { ChevronRight, MessageCircle, UserPlus } from "lucide-react-native";
+import { ChevronRight, MessageCircle, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
@@ -30,18 +31,22 @@ export default function GuideInbox() {
 	const { user } = useAuth();
 	const [bookings, setBookings] = useState<any[]>([]);
 	const [threads, setThreads] = useState<any[]>([]);
-	const [chatRequests, setChatRequests] = useState<any[]>([]);
 	const [loadingB, setLoadingB] = useState(true);
 	const [loadingT, setLoadingT] = useState(true);
-	const [loadingR, setLoadingR] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
-	const [stats, setStats] = useState({ response: 98, completion: 100 });
+	const [stats, setStats] = useState({ response: 100, completion: 100 });
 	const [pendingCount, setPendingCount] = useState(0);
+	const [guideStats, setGuideStats] = useState({ trips: 0, reviews: 0 });
+	const [showTripsModal, setShowTripsModal] = useState(false);
+	const [showReviewsModal, setShowReviewsModal] = useState(false);
+	const [completedBookings, setCompletedBookings] = useState<any[]>([]);
+	const [reviewsList, setReviewsList] = useState<any[]>([]);
+	const [loadingModal, setLoadingModal] = useState(false);
 
 	const load = useCallback(async () => {
 		if (!user) return;
 		try {
-			const [bRes, tRes, cntRes, rRes] = await Promise.all([
+			const [bRes, tRes, cntRes] = await Promise.all([
 				(supabase.from("bookings") as any)
 					.select(
 						"*, tourist:profiles!tourist_id(full_name, avatar_url)",
@@ -60,33 +65,23 @@ export default function GuideInbox() {
 					.select("id", { count: "exact", head: true })
 					.eq("guide_id", user.id)
 					.eq("status", "requested"),
-				(supabase.from("chat_requests") as any)
-					.select(
-						"*, tourist:profiles!tourist_id(full_name, avatar_url)",
-					)
-					.eq("guide_id", user.id)
-					.eq("status", "pending")
-					.order("created_at", { ascending: false }),
 			]);
 			setBookings(bRes.data || []);
 			setThreads(tRes.data || []);
 			setPendingCount(cntRes.count || 0);
-			setChatRequests(rRes.data || []);
 
-			// Response rate: % of chat requests that guide has responded to (not still pending)
-			const { data: crAll } = await (
-				supabase.from("chat_requests") as any
-			)
+			// Response rate: % of booking requests that have been acted on (not still 'requested')
+			const { data: bkReqs } = await (supabase.from("bookings") as any)
 				.select("status")
-				.eq("guide_id", user.id);
-			const totalRequests = crAll?.length ?? 0;
-			const responded = (crAll || []).filter(
-				(r: any) => r.status !== "pending",
+				.eq("guide_id", user.id)
+				.in("status", ["requested", "accepted", "rejected", "in_progress", "completed", "cancelled"]);
+			const totalReqs = bkReqs?.length ?? 0;
+			const responded = (bkReqs || []).filter(
+				(b: any) => b.status !== "requested",
 			).length;
-			const responseRate =
-				totalRequests > 0
-					? Math.round((responded / totalRequests) * 100)
-					: 100;
+			const responseRate = totalReqs > 0
+				? Math.round((responded / totalReqs) * 100)
+				: 100;
 
 			// Completion rate: completed / (accepted + in_progress + completed)
 			const { data: bkAll } = await (supabase.from("bookings") as any)
@@ -97,21 +92,51 @@ export default function GuideInbox() {
 			const completedCount = (bkAll || []).filter(
 				(b: any) => b.status === "completed",
 			).length;
-			const completionRate =
-				totalActive > 0
-					? Math.round((completedCount / totalActive) * 100)
-					: 100;
+			const completionRate = totalActive > 0
+				? Math.round((completedCount / totalActive) * 100)
+				: 100;
 
 			setStats({ response: responseRate, completion: completionRate });
+
+			const { data: gp } = await (supabase.from("guide_profiles") as any)
+				.select("total_trips_completed, total_reviews")
+				.eq("id", user.id)
+				.single();
+			setGuideStats({
+				trips: gp?.total_trips_completed ?? 0,
+				reviews: gp?.total_reviews ?? 0,
+			});
 		} catch (e) {
 			console.warn("Inbox load error", e);
 		} finally {
 			setLoadingB(false);
 			setLoadingT(false);
-			setLoadingR(false);
 			setRefreshing(false);
 		}
 	}, [user]);
+
+	async function openTripsModal() {
+		setShowTripsModal(true);
+		setLoadingModal(true);
+		const { data } = await (supabase.from("bookings") as any)
+			.select("*, tourist:profiles!tourist_id(full_name)")
+			.eq("guide_id", user!.id)
+			.eq("status", "completed")
+			.order("created_at", { ascending: false });
+		setCompletedBookings(data || []);
+		setLoadingModal(false);
+	}
+
+	async function openReviewsModal() {
+		setShowReviewsModal(true);
+		setLoadingModal(true);
+		const { data } = await (supabase.from("reviews") as any)
+			.select("*, profiles!reviewer_id(full_name)")
+			.eq("reviewee_id", user!.id)
+			.order("created_at", { ascending: false });
+		setReviewsList(data || []);
+		setLoadingModal(false);
+	}
 
 	useEffect(() => {
 		load();
@@ -148,88 +173,11 @@ export default function GuideInbox() {
 			)
 			.subscribe();
 
-		const requestsChannel = supabase
-			.channel(`guide_requests_${user.id}`)
-			.on(
-				"postgres_changes",
-				{
-					event: "*",
-					schema: "public",
-					table: "chat_requests",
-					filter: `guide_id=eq.${user.id}`,
-				},
-				() => load(),
-			)
-			.subscribe();
-
 		return () => {
 			supabase.removeChannel(bookingsChannel);
 			supabase.removeChannel(threadsChannel);
-			supabase.removeChannel(requestsChannel);
 		};
 	}, [user, load]);
-
-	const activeBookings = bookings.filter((b) =>
-		["accepted", "in_progress"].includes(b.status),
-	);
-
-	async function acceptRequest(req: any) {
-		try {
-			// Check if a thread already exists for this pair
-			const { data: existing } = await (
-				supabase.from("chat_threads") as any
-			)
-				.select("id")
-				.eq("tourist_id", req.tourist_id)
-				.eq("guide_id", user!.id)
-				.maybeSingle();
-
-			let threadId: string;
-			if (existing) {
-				threadId = existing.id;
-			} else {
-				const { data: newThread, error } = await (
-					supabase.from("chat_threads") as any
-				)
-					.insert({ tourist_id: req.tourist_id, guide_id: user!.id })
-					.select()
-					.single();
-				if (error) throw error;
-				threadId = newThread.id;
-			}
-
-			await (supabase.from("chat_requests") as any)
-				.update({ status: "accepted" })
-				.eq("id", req.id);
-			load();
-			router.push(`/chat/${threadId}` as any);
-		} catch (e: any) {
-			Alert.alert(
-				"Error",
-				e?.message || "Could not accept request. Please try again.",
-			);
-		}
-	}
-
-	async function declineRequest(req: any) {
-		Alert.alert(
-			"Decline Request",
-			`Decline chat request from ${(req.tourist as any)?.full_name || "this tourist"}?`,
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Decline",
-					style: "destructive",
-					onPress: async () => {
-						await (supabase.from("chat_requests") as any)
-							.update({ status: "rejected" })
-							.eq("id", req.id);
-						load();
-					},
-				},
-			],
-		);
-	}
 
 	return (
 		<SafeScreen edges={["top"]} bg="#F7F7F4">
@@ -260,93 +208,6 @@ export default function GuideInbox() {
 					/>
 				}
 			>
-				{/* ── Chat Requests ── */}
-				{(loadingR || chatRequests.length > 0) && (
-					<View className="mb-6">
-						<View className="flex-row justify-between items-center mb-3">
-							<View className="flex-row items-center">
-								<UserPlus size={18} color="#8B1A1A" />
-								<Text className="font-semibold text-lg text-text ml-2">
-									Connect Requests
-								</Text>
-							</View>
-							{chatRequests.length > 0 && (
-								<View className="bg-red-500 px-2 py-0.5 rounded-full">
-									<Text className="text-white text-xs font-bold">
-										{chatRequests.length}
-									</Text>
-								</View>
-							)}
-						</View>
-
-						{loadingR ? (
-							<View className="items-center py-4">
-								<ActivityIndicator color="#8B1A1A" />
-							</View>
-						) : (
-							chatRequests.map((req) => {
-								const tourist = req.tourist as any;
-								const name = tourist?.full_name || "Tourist";
-								const initial = name[0].toUpperCase();
-								return (
-									<View
-										key={req.id}
-										className="bg-card rounded-2xl border border-border p-4 shadow-sm mb-3"
-									>
-										<View className="flex-row items-center mb-3">
-											<View className="w-12 h-12 bg-primary/10 rounded-full items-center justify-center mr-3">
-												<Text className="font-bold text-primary text-base">
-													{initial}
-												</Text>
-											</View>
-											<View className="flex-1">
-												<Text className="font-semibold text-text">
-													{name}
-												</Text>
-												<Text className="text-xs text-text-secondary mt-0.5">
-													Wants to connect with you
-												</Text>
-											</View>
-										</View>
-										{req.message ? (
-											<Text
-												className="text-sm text-text-secondary bg-background rounded-xl px-3 py-2 mb-3"
-												numberOfLines={2}
-											>
-												{req.message}
-											</Text>
-										) : null}
-										<View className="flex-row gap-3">
-											<TouchableOpacity
-												activeOpacity={0.8}
-												onPress={() =>
-													declineRequest(req)
-												}
-												className="flex-1 border border-border rounded-xl py-2.5 items-center"
-											>
-												<Text className="font-semibold text-text-secondary text-sm">
-													Decline
-												</Text>
-											</TouchableOpacity>
-											<TouchableOpacity
-												activeOpacity={0.8}
-												onPress={() =>
-													acceptRequest(req)
-												}
-												className="flex-1 bg-primary rounded-xl py-2.5 items-center"
-											>
-												<Text className="font-semibold text-white text-sm">
-													Accept & Chat
-												</Text>
-											</TouchableOpacity>
-										</View>
-									</View>
-								);
-							})
-						)}
-					</View>
-				)}
-
 				{/* ── Booking Requests ── */}
 				<View className="mb-6">
 					<View className="flex-row justify-between items-center mb-3">
@@ -397,16 +258,10 @@ export default function GuideInbox() {
 									<View className="flex-row items-center">
 										<View className="bg-primary/10 rounded-xl p-3 items-center justify-center w-14 h-14 mr-4">
 											<Text className="font-display text-base text-primary">
-												{new Date(
-													booking.start_date,
-												).getDate()}
+												{booking.start_date ? new Date(booking.start_date).getDate() : '—'}
 											</Text>
 											<Text className="text-[9px] font-semibold text-primary uppercase">
-												{new Date(
-													booking.start_date,
-												).toLocaleString("default", {
-													month: "short",
-												})}
+												{booking.start_date ? new Date(booking.start_date).toLocaleString("default", { month: "short" }) : ''}
 											</Text>
 										</View>
 										<View className="flex-1">
@@ -461,30 +316,21 @@ export default function GuideInbox() {
 						<View className="bg-card rounded-2xl border border-border p-5 items-center">
 							<MessageCircle size={28} color="#9CA3AF" />
 							<Text className="text-text-secondary text-sm mt-2 text-center">
-								No active chats. Accept a booking to start
-								chatting.
+								No active chats yet.
 							</Text>
 						</View>
 					) : (
 						threads.map((thread) => {
 							const tourist = thread.tourist as any;
 							const name = tourist?.full_name || "Tourist";
-							const initial = name[0].toUpperCase();
-							const lastMsgTime = new Date(
-								thread.last_message_at,
-							);
-							const isToday =
-								lastMsgTime.toDateString() ===
-								new Date().toDateString();
-							const timeStr = isToday
-								? lastMsgTime.toLocaleTimeString([], {
-										hour: "2-digit",
-										minute: "2-digit",
-									})
-								: lastMsgTime.toLocaleDateString([], {
-										month: "short",
-										day: "numeric",
-									});
+							const rawTime = thread.last_message_at;
+							const lastMsgTime = rawTime ? new Date(rawTime) : null;
+							const validDate = lastMsgTime && !isNaN(lastMsgTime.getTime());
+							const timeStr = validDate
+								? (lastMsgTime!.toDateString() === new Date().toDateString()
+									? lastMsgTime!.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+									: lastMsgTime!.toLocaleDateString([], { month: "short", day: "numeric" }))
+								: '';
 
 							return (
 								<TouchableOpacity
@@ -530,6 +376,34 @@ export default function GuideInbox() {
 						Performance
 					</Text>
 					<View className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+						{/* Tappable counters */}
+						<View className="flex-row mb-4" style={{ gap: 10 }}>
+							<TouchableOpacity
+								onPress={openTripsModal}
+								activeOpacity={0.7}
+								className="flex-1 bg-primary/10 rounded-xl p-3 items-center"
+							>
+								<Text className="text-xl font-bold text-primary">
+									{guideStats.trips}
+								</Text>
+								<Text className="text-xs text-text-secondary mt-0.5">
+									Trips Completed
+								</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								onPress={openReviewsModal}
+								activeOpacity={0.7}
+								className="flex-1 bg-primary/10 rounded-xl p-3 items-center"
+							>
+								<Text className="text-xl font-bold text-primary">
+									{guideStats.reviews}
+								</Text>
+								<Text className="text-xs text-text-secondary mt-0.5">
+									Reviews
+								</Text>
+							</TouchableOpacity>
+						</View>
+
 						<View className="mb-4">
 							<View className="flex-row justify-between mb-1">
 								<Text className="text-xs text-text-secondary font-medium">
@@ -567,6 +441,144 @@ export default function GuideInbox() {
 
 				<View className="h-6" />
 			</ScrollView>
+
+			{/* Completed Trips Modal */}
+			<Modal
+				visible={showTripsModal}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowTripsModal(false)}
+			>
+				<Pressable
+					style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
+					onPress={() => setShowTripsModal(false)}
+				/>
+				<View
+					style={{
+						backgroundColor: "#fff",
+						borderTopLeftRadius: 20,
+						borderTopRightRadius: 20,
+						padding: 20,
+						maxHeight: "75%",
+					}}
+				>
+					<View className="flex-row justify-between items-center mb-4">
+						<Text className="font-semibold text-lg text-text">
+							Completed Trips
+						</Text>
+						<TouchableOpacity onPress={() => setShowTripsModal(false)}>
+							<X size={22} color="#9CA3AF" />
+						</TouchableOpacity>
+					</View>
+					{loadingModal ? (
+						<ActivityIndicator color="#8B1A1A" style={{ paddingVertical: 32 }} />
+					) : (
+						<ScrollView showsVerticalScrollIndicator={false}>
+							{completedBookings.length === 0 ? (
+								<Text className="text-text-secondary text-center py-8">
+									No completed trips yet.
+								</Text>
+							) : (
+								completedBookings.map((b) => (
+									<View
+										key={b.id}
+										className="border-b border-border py-3"
+									>
+										<Text className="font-semibold text-text">
+											{(b.tourist as any)?.full_name || "Tourist"}
+										</Text>
+										<Text className="text-xs text-text-secondary mt-0.5">
+											{b.start_date
+												? new Date(b.start_date).toLocaleDateString()
+												: "No date"}{" "}
+											· {b.total_days} days · रू{" "}
+											{b.total_amount_npr?.toLocaleString()}
+										</Text>
+									</View>
+								))
+							)}
+							<View className="h-4" />
+						</ScrollView>
+					)}
+				</View>
+			</Modal>
+
+			{/* Customer Reviews Modal */}
+			<Modal
+				visible={showReviewsModal}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowReviewsModal(false)}
+			>
+				<Pressable
+					style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
+					onPress={() => setShowReviewsModal(false)}
+				/>
+				<View
+					style={{
+						backgroundColor: "#fff",
+						borderTopLeftRadius: 20,
+						borderTopRightRadius: 20,
+						padding: 20,
+						maxHeight: "75%",
+					}}
+				>
+					<View className="flex-row justify-between items-center mb-4">
+						<Text className="font-semibold text-lg text-text">
+							Customer Reviews
+						</Text>
+						<TouchableOpacity onPress={() => setShowReviewsModal(false)}>
+							<X size={22} color="#9CA3AF" />
+						</TouchableOpacity>
+					</View>
+					{loadingModal ? (
+						<ActivityIndicator color="#8B1A1A" style={{ paddingVertical: 32 }} />
+					) : (
+						<ScrollView showsVerticalScrollIndicator={false}>
+							{reviewsList.length === 0 ? (
+								<Text className="text-text-secondary text-center py-8">
+									No reviews yet.
+								</Text>
+							) : (
+								reviewsList.map((r) => (
+									<View
+										key={r.id}
+										className="border-b border-border py-3"
+									>
+										<View className="flex-row justify-between mb-1">
+											<Text className="font-semibold text-text">
+												{(r.profiles as any)?.full_name || "Anonymous"}
+											</Text>
+											<Text className="text-xs text-text-secondary">
+												{new Date(r.created_at).toLocaleDateString()}
+											</Text>
+										</View>
+										<View className="flex-row mb-1">
+											{[1, 2, 3, 4, 5].map((n) => (
+												<Text
+													key={n}
+													style={{
+														color: n <= r.rating ? "#F4A261" : "#E5E7EB",
+														fontSize: 14,
+													}}
+												>
+													★
+												</Text>
+											))}
+										</View>
+										{r.comment ? (
+											<Text className="text-sm text-text-secondary">
+												{r.comment}
+											</Text>
+										) : null}
+									</View>
+								))
+							)}
+							<View className="h-4" />
+						</ScrollView>
+					)}
+				</View>
+			</Modal>
 		</SafeScreen>
 	);
 }
