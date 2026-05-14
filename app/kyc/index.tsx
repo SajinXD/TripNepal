@@ -235,22 +235,16 @@ export default function KYCWizard() {
 				service_areas: selectedAreas.length ? selectedAreas : [],
 			};
 
-			console.log(
-				"Updating guide_profiles with:",
-				guideProfile,
-				"for id:",
-				user.id,
-			);
 			const { error: updateError } = await (
 				supabase.from("guide_profiles") as any
 			)
 				.update(guideProfile)
 				.eq("id", user.id);
+
 			if (updateError) {
 				console.error("Guide profile update error:", updateError);
 				throw updateError;
 			}
-			console.log("Guide profile updated successfully");
 
 			await (supabase.from("kyc_verifications") as any)
 				.update({
