@@ -13,9 +13,9 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
-	Image as RNImage,
 	KeyboardAvoidingView,
 	Platform,
+	Image as RNImage,
 	ScrollView,
 	Text,
 	TextInput,
@@ -58,7 +58,9 @@ export default function ChatScreen() {
 				const { data } = await supabase.storage
 					.from("chat-attachments")
 					.createSignedUrl(m.attachment_url!, 3600);
-				return data?.signedUrl ? ([m.id, data.signedUrl] as const) : null;
+				return data?.signedUrl
+					? ([m.id, data.signedUrl] as const)
+					: null;
 			}),
 		);
 
@@ -253,7 +255,6 @@ export default function ChatScreen() {
 					) : (
 						messages.map((msg) => {
 							const isMe = msg.sender_id === user?.id;
-							console.log(msg);
 							return (
 								<View
 									key={msg.id}
@@ -262,7 +263,9 @@ export default function ChatScreen() {
 									{msg.message_type === "image" ? (
 										signedUrls[msg.id] ? (
 											<RNImage
-												source={{ uri: signedUrls[msg.id] }}
+												source={{
+													uri: signedUrls[msg.id],
+												}}
 												style={{
 													width: 200,
 													height: 200,

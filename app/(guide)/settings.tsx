@@ -4,13 +4,13 @@ import {
 	ChevronRight,
 	ChevronUp,
 	DollarSign,
+	FileCheck,
 	FileText,
 	HelpCircle,
 	LogOut,
 	Pencil,
 	Shield,
 	Upload,
-	FileCheck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -49,9 +49,10 @@ export default function GuideSettingsScreen() {
 	const [savingNegotiable, setSavingNegotiable] = useState(false);
 
 	// NTB License section
-	const [ntbLicenseNumber, setNtbLicenseNumber] = useState('');
+	const [ntbLicenseNumber, setNtbLicenseNumber] = useState("");
 	const [ntbLicenseUrl, setNtbLicenseUrl] = useState<string | null>(null);
-	const [ntbLicenseStatus, setNtbLicenseStatus] = useState<string>('not_submitted');
+	const [ntbLicenseStatus, setNtbLicenseStatus] =
+		useState<string>("not_submitted");
 	const [ntbExpanded, setNtbExpanded] = useState(false);
 	const [uploadingNtb, setUploadingNtb] = useState(false);
 	const [savingNtb, setSavingNtb] = useState(false);
@@ -63,7 +64,7 @@ export default function GuideSettingsScreen() {
 				.select(
 					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number, ntb_license_url, ntb_license_status",
 				)
-				.eq("id", user.id)
+				.eq("user_id", user.id)
 				.single(),
 			supabase
 				.from("kyc_verifications")
@@ -75,12 +76,12 @@ export default function GuideSettingsScreen() {
 			if (gpData) {
 				setGuideProfile(gpData);
 				setPriceNegotiable(gpData.price_negotiable ?? false);
-				setNtbLicenseNumber(gpData.guide_license_number ?? '');
+				setNtbLicenseNumber(gpData.guide_license_number ?? "");
 				setNtbLicenseUrl(gpData.ntb_license_url ?? null);
-				const status = gpData.ntb_license_status ?? 'not_submitted';
+				const status = gpData.ntb_license_status ?? "not_submitted";
 				setNtbLicenseStatus(status);
 				// Auto-expand form only when not yet submitted
-				setNtbExpanded(status === 'not_submitted');
+				setNtbExpanded(status === "not_submitted");
 			}
 			if (gpData?.is_verified) {
 				setKycStatus("approved");
@@ -121,7 +122,9 @@ export default function GuideSettingsScreen() {
 					.update({ avatar_url: url })
 					.eq("id", user.id);
 				if (error) throw error;
-				updateProfile({ avatar_url: url } as Parameters<typeof updateProfile>[0]);
+				updateProfile({ avatar_url: url } as Parameters<
+					typeof updateProfile
+				>[0]);
 				Alert.alert("Success", "Profile picture updated successfully!");
 			}
 		} catch (error: any) {
@@ -141,10 +144,13 @@ export default function GuideSettingsScreen() {
 		try {
 			const { error } = await (supabase.from("guide_profiles") as any)
 				.update({ price_negotiable: value })
-				.eq("id", user.id);
+				.eq("user_id", user.id);
 			if (error) throw error;
 		} catch (e: any) {
-			Alert.alert("Error", e.message || "Could not update pricing setting.");
+			Alert.alert(
+				"Error",
+				e.message || "Could not update pricing setting.",
+			);
 			setPriceNegotiable(!value);
 		} finally {
 			setSavingNegotiable(false);
@@ -155,10 +161,13 @@ export default function GuideSettingsScreen() {
 		if (!user) return;
 		setUploadingNtb(true);
 		try {
-			const url = await pickAndUploadImage('kyc-documents', user.id);
+			const url = await pickAndUploadImage("kyc-documents", user.id);
 			if (url) setNtbLicenseUrl(url);
 		} catch (e: any) {
-			Alert.alert("Upload Failed", e.message || "Could not upload license photo.");
+			Alert.alert(
+				"Upload Failed",
+				e.message || "Could not upload license photo.",
+			);
 		} finally {
 			setUploadingNtb(false);
 		}
@@ -169,20 +178,26 @@ export default function GuideSettingsScreen() {
 		setSavingNtb(true);
 		try {
 			if (!ntbLicenseNumber.trim() && !ntbLicenseUrl) {
-				Alert.alert("Required", "Please enter your license number or upload a photo.");
+				Alert.alert(
+					"Required",
+					"Please enter your license number or upload a photo.",
+				);
 				return;
 			}
 			const { error } = await (supabase.from("guide_profiles") as any)
 				.update({
 					guide_license_number: ntbLicenseNumber.trim() || null,
 					ntb_license_url: ntbLicenseUrl,
-					ntb_license_status: 'pending',
+					ntb_license_status: "pending",
 				})
-				.eq("id", user.id);
+				.eq("user_id", user.id);
 			if (error) throw error;
-			setNtbLicenseStatus('pending');
+			setNtbLicenseStatus("pending");
 			setNtbExpanded(false);
-			Alert.alert("Submitted", "Your NTB license is under review. This usually takes 1–2 business days.");
+			Alert.alert(
+				"Submitted",
+				"Your NTB license is under review. This usually takes 1–2 business days.",
+			);
 		} catch (e: any) {
 			Alert.alert("Error", e.message || "Could not save NTB details.");
 		} finally {
@@ -416,8 +431,8 @@ export default function GuideSettingsScreen() {
 				</View>
 
 				{/* KYC Status Banner */}
-				{kycStatus !== "approved" && (
-					kycStatus === "pending" ? (
+				{kycStatus !== "approved" &&
+					(kycStatus === "pending" ? (
 						// Non-clickable when under review
 						<View
 							style={{
@@ -431,10 +446,22 @@ export default function GuideSettingsScreen() {
 						>
 							<Shield size={20} color="#D97706" />
 							<View style={{ flex: 1, marginLeft: 12 }}>
-								<Text style={{ fontWeight: "700", color: "#D97706", fontSize: 14 }}>
+								<Text
+									style={{
+										fontWeight: "700",
+										color: "#D97706",
+										fontSize: 14,
+									}}
+								>
 									Verification Under Review
 								</Text>
-								<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+								<Text
+									style={{
+										fontSize: 12,
+										color: "#6B7280",
+										marginTop: 2,
+									}}
+								>
 									Usually takes 24–48 hours
 								</Text>
 							</View>
@@ -453,15 +480,20 @@ export default function GuideSettingsScreen() {
 						>
 							<Shield size={20} color="#DC2626" />
 							<View style={{ flex: 1, marginLeft: 12 }}>
-								<Text style={{ fontWeight: "700", color: "#DC2626", fontSize: 14 }}>
+								<Text
+									style={{
+										fontWeight: "700",
+										color: "#DC2626",
+										fontSize: 14,
+									}}
+								>
 									{kycStatus === "rejected"
 										? "Verification Rejected — Resubmit"
 										: "Complete KYC Verification"}
 								</Text>
 							</View>
 						</View>
-					)
-				)}
+					))}
 
 				{/* NTB LICENSE */}
 				<Text
@@ -480,9 +512,11 @@ export default function GuideSettingsScreen() {
 				<View
 					style={{
 						backgroundColor:
-							ntbLicenseStatus === "approved" ? "#D1FAE5"
-							: ntbLicenseStatus === "pending" ? "#FEF3C7"
-							: "#F3F4F6",
+							ntbLicenseStatus === "approved"
+								? "#D1FAE5"
+								: ntbLicenseStatus === "pending"
+									? "#FEF3C7"
+									: "#F3F4F6",
 						borderRadius: 12,
 						padding: 14,
 						marginBottom: 12,
@@ -493,9 +527,11 @@ export default function GuideSettingsScreen() {
 					<Shield
 						size={20}
 						color={
-							ntbLicenseStatus === "approved" ? "#059669"
-							: ntbLicenseStatus === "pending" ? "#D97706"
-							: "#6B7280"
+							ntbLicenseStatus === "approved"
+								? "#059669"
+								: ntbLicenseStatus === "pending"
+									? "#D97706"
+									: "#6B7280"
 						}
 					/>
 					<View style={{ flex: 1, marginLeft: 12 }}>
@@ -504,9 +540,11 @@ export default function GuideSettingsScreen() {
 								fontWeight: "700",
 								fontSize: 14,
 								color:
-									ntbLicenseStatus === "approved" ? "#059669"
-									: ntbLicenseStatus === "pending" ? "#D97706"
-									: "#6B7280",
+									ntbLicenseStatus === "approved"
+										? "#059669"
+										: ntbLicenseStatus === "pending"
+											? "#D97706"
+											: "#6B7280",
 							}}
 						>
 							{ntbLicenseStatus === "approved"
@@ -515,7 +553,13 @@ export default function GuideSettingsScreen() {
 									? "Pending Verification"
 									: "NTB License Not Submitted"}
 						</Text>
-						<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+						<Text
+							style={{
+								fontSize: 12,
+								color: "#6B7280",
+								marginTop: 2,
+							}}
+						>
 							{ntbLicenseStatus === "approved"
 								? "Your NTB license has been verified."
 								: ntbLicenseStatus === "pending"
@@ -546,13 +590,24 @@ export default function GuideSettingsScreen() {
 						activeOpacity={0.7}
 					>
 						<FileCheck size={18} color="#8B1A1A" />
-						<Text style={{ flex: 1, marginLeft: 10, fontSize: 15, fontWeight: "600", color: "#1A1C1E" }}>
-							{ntbLicenseStatus === "pending" ? "View / Update License" : "Add NTB License"}
+						<Text
+							style={{
+								flex: 1,
+								marginLeft: 10,
+								fontSize: 15,
+								fontWeight: "600",
+								color: "#1A1C1E",
+							}}
+						>
+							{ntbLicenseStatus === "pending"
+								? "View / Update License"
+								: "Add NTB License"}
 						</Text>
-						{ntbExpanded
-							? <ChevronUp size={18} color="#9CA3AF" />
-							: <ChevronDown size={18} color="#9CA3AF" />
-						}
+						{ntbExpanded ? (
+							<ChevronUp size={18} color="#9CA3AF" />
+						) : (
+							<ChevronDown size={18} color="#9CA3AF" />
+						)}
 					</TouchableOpacity>
 				)}
 
@@ -573,7 +628,14 @@ export default function GuideSettingsScreen() {
 							elevation: 1,
 						}}
 					>
-						<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+						<Text
+							style={{
+								fontSize: 13,
+								fontWeight: "600",
+								color: "#1A1C1E",
+								marginBottom: 6,
+							}}
+						>
 							NTB License Number
 						</Text>
 						<TextInput
@@ -593,7 +655,14 @@ export default function GuideSettingsScreen() {
 							}}
 						/>
 
-						<Text style={{ fontSize: 13, fontWeight: "600", color: "#1A1C1E", marginBottom: 6 }}>
+						<Text
+							style={{
+								fontSize: 13,
+								fontWeight: "600",
+								color: "#1A1C1E",
+								marginBottom: 6,
+							}}
+						>
 							License Photo
 						</Text>
 						<TouchableOpacity
@@ -602,11 +671,15 @@ export default function GuideSettingsScreen() {
 							style={{
 								borderWidth: 2,
 								borderStyle: "dashed",
-								borderColor: ntbLicenseUrl ? "#8B1A1A" : "#D1D5DB",
+								borderColor: ntbLicenseUrl
+									? "#8B1A1A"
+									: "#D1D5DB",
 								borderRadius: 10,
 								padding: 16,
 								alignItems: "center",
-								backgroundColor: ntbLicenseUrl ? "#FFF5F5" : "#FAFAFA",
+								backgroundColor: ntbLicenseUrl
+									? "#FFF5F5"
+									: "#FAFAFA",
 								marginBottom: 14,
 							}}
 						>
@@ -617,8 +690,19 @@ export default function GuideSettingsScreen() {
 							) : (
 								<Upload size={24} color="#9CA3AF" />
 							)}
-							<Text style={{ fontSize: 13, color: ntbLicenseUrl ? "#8B1A1A" : "#9CA3AF", marginTop: 6, fontWeight: "600" }}>
-								{ntbLicenseUrl ? "License Photo Uploaded ✓" : "Upload License Photo"}
+							<Text
+								style={{
+									fontSize: 13,
+									color: ntbLicenseUrl
+										? "#8B1A1A"
+										: "#9CA3AF",
+									marginTop: 6,
+									fontWeight: "600",
+								}}
+							>
+								{ntbLicenseUrl
+									? "License Photo Uploaded ✓"
+									: "Upload License Photo"}
 							</Text>
 						</TouchableOpacity>
 
@@ -636,14 +720,24 @@ export default function GuideSettingsScreen() {
 							{savingNtb ? (
 								<ActivityIndicator color="#fff" />
 							) : (
-								<Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Submit for Verification</Text>
+								<Text
+									style={{
+										color: "#fff",
+										fontWeight: "700",
+										fontSize: 14,
+									}}
+								>
+									Submit for Verification
+								</Text>
 							)}
 						</TouchableOpacity>
 					</View>
 				)}
 
 				{/* Spacer when approved and form hidden */}
-				{ntbLicenseStatus === "approved" && <View style={{ marginBottom: 24 }} />}
+				{ntbLicenseStatus === "approved" && (
+					<View style={{ marginBottom: 24 }} />
+				)}
 
 				{/* PRICING */}
 				<Text
@@ -669,12 +763,30 @@ export default function GuideSettingsScreen() {
 						elevation: 1,
 					}}
 				>
-					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							justifyContent: "space-between",
+						}}
+					>
 						<View style={{ flex: 1, marginRight: 12 }}>
-							<Text style={{ fontSize: 15, fontWeight: "600", color: "#1A1C1E" }}>
+							<Text
+								style={{
+									fontSize: 15,
+									fontWeight: "600",
+									color: "#1A1C1E",
+								}}
+							>
 								Price Negotiable
 							</Text>
-							<Text style={{ fontSize: 12, color: "#717973", marginTop: 2 }}>
+							<Text
+								style={{
+									fontSize: 12,
+									color: "#717973",
+									marginTop: 2,
+								}}
+							>
 								{priceNegotiable
 									? "Tourists can negotiate your daily rate"
 									: "Your rate is fixed — no negotiation"}
@@ -686,7 +798,10 @@ export default function GuideSettingsScreen() {
 							<Switch
 								value={priceNegotiable}
 								onValueChange={handleNegotiableToggle}
-								trackColor={{ false: "#E5E7EB", true: "#8B1A1A" }}
+								trackColor={{
+									false: "#E5E7EB",
+									true: "#8B1A1A",
+								}}
 								thumbColor="#fff"
 							/>
 						)}

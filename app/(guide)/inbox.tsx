@@ -6,14 +6,14 @@ import { useRouter } from "expo-router";
 import { ChevronRight, MessageCircle, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+	ActivityIndicator,
+	Modal,
+	Pressable,
+	RefreshControl,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> =
@@ -74,14 +74,20 @@ export default function GuideInbox() {
 			const { data: bkReqs } = await (supabase.from("bookings") as any)
 				.select("status")
 				.eq("guide_id", user.id)
-				.in("status", ["requested", "accepted", "rejected", "in_progress", "completed", "cancelled"]);
+				.in("status", [
+					"requested",
+					"accepted",
+					"rejected",
+					"in_progress",
+					"completed",
+					"cancelled",
+				]);
 			const totalReqs = bkReqs?.length ?? 0;
 			const responded = (bkReqs || []).filter(
 				(b: any) => b.status !== "requested",
 			).length;
-			const responseRate = totalReqs > 0
-				? Math.round((responded / totalReqs) * 100)
-				: 100;
+			const responseRate =
+				totalReqs > 0 ? Math.round((responded / totalReqs) * 100) : 100;
 
 			// Completion rate: completed / (accepted + in_progress + completed)
 			const { data: bkAll } = await (supabase.from("bookings") as any)
@@ -92,15 +98,16 @@ export default function GuideInbox() {
 			const completedCount = (bkAll || []).filter(
 				(b: any) => b.status === "completed",
 			).length;
-			const completionRate = totalActive > 0
-				? Math.round((completedCount / totalActive) * 100)
-				: 100;
+			const completionRate =
+				totalActive > 0
+					? Math.round((completedCount / totalActive) * 100)
+					: 100;
 
 			setStats({ response: responseRate, completion: completionRate });
 
 			const { data: gp } = await (supabase.from("guide_profiles") as any)
 				.select("total_trips_completed, total_reviews")
-				.eq("id", user.id)
+				.eq("user_id", user.id)
 				.single();
 			setGuideStats({
 				trips: gp?.total_trips_completed ?? 0,
@@ -258,10 +265,21 @@ export default function GuideInbox() {
 									<View className="flex-row items-center">
 										<View className="bg-primary/10 rounded-xl p-3 items-center justify-center w-14 h-14 mr-4">
 											<Text className="font-display text-base text-primary">
-												{booking.start_date ? new Date(booking.start_date).getDate() : '—'}
+												{booking.start_date
+													? new Date(
+															booking.start_date,
+														).getDate()
+													: "—"}
 											</Text>
 											<Text className="text-[9px] font-semibold text-primary uppercase">
-												{booking.start_date ? new Date(booking.start_date).toLocaleString("default", { month: "short" }) : ''}
+												{booking.start_date
+													? new Date(
+															booking.start_date,
+														).toLocaleString(
+															"default",
+															{ month: "short" },
+														)
+													: ""}
 											</Text>
 										</View>
 										<View className="flex-1">
@@ -324,13 +342,23 @@ export default function GuideInbox() {
 							const tourist = thread.tourist as any;
 							const name = tourist?.full_name || "Tourist";
 							const rawTime = thread.last_message_at;
-							const lastMsgTime = rawTime ? new Date(rawTime) : null;
-							const validDate = lastMsgTime && !isNaN(lastMsgTime.getTime());
+							const lastMsgTime = rawTime
+								? new Date(rawTime)
+								: null;
+							const validDate =
+								lastMsgTime && !isNaN(lastMsgTime.getTime());
 							const timeStr = validDate
-								? (lastMsgTime!.toDateString() === new Date().toDateString()
-									? lastMsgTime!.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-									: lastMsgTime!.toLocaleDateString([], { month: "short", day: "numeric" }))
-								: '';
+								? lastMsgTime!.toDateString() ===
+									new Date().toDateString()
+									? lastMsgTime!.toLocaleTimeString([], {
+											hour: "2-digit",
+											minute: "2-digit",
+										})
+									: lastMsgTime!.toLocaleDateString([], {
+											month: "short",
+											day: "numeric",
+										})
+								: "";
 
 							return (
 								<TouchableOpacity
@@ -466,12 +494,17 @@ export default function GuideInbox() {
 						<Text className="font-semibold text-lg text-text">
 							Completed Trips
 						</Text>
-						<TouchableOpacity onPress={() => setShowTripsModal(false)}>
+						<TouchableOpacity
+							onPress={() => setShowTripsModal(false)}
+						>
 							<X size={22} color="#9CA3AF" />
 						</TouchableOpacity>
 					</View>
 					{loadingModal ? (
-						<ActivityIndicator color="#8B1A1A" style={{ paddingVertical: 32 }} />
+						<ActivityIndicator
+							color="#8B1A1A"
+							style={{ paddingVertical: 32 }}
+						/>
 					) : (
 						<ScrollView showsVerticalScrollIndicator={false}>
 							{completedBookings.length === 0 ? (
@@ -485,11 +518,14 @@ export default function GuideInbox() {
 										className="border-b border-border py-3"
 									>
 										<Text className="font-semibold text-text">
-											{(b.tourist as any)?.full_name || "Tourist"}
+											{(b.tourist as any)?.full_name ||
+												"Tourist"}
 										</Text>
 										<Text className="text-xs text-text-secondary mt-0.5">
 											{b.start_date
-												? new Date(b.start_date).toLocaleDateString()
+												? new Date(
+														b.start_date,
+													).toLocaleDateString()
 												: "No date"}{" "}
 											· {b.total_days} days · रू{" "}
 											{b.total_amount_npr?.toLocaleString()}
@@ -527,12 +563,17 @@ export default function GuideInbox() {
 						<Text className="font-semibold text-lg text-text">
 							Customer Reviews
 						</Text>
-						<TouchableOpacity onPress={() => setShowReviewsModal(false)}>
+						<TouchableOpacity
+							onPress={() => setShowReviewsModal(false)}
+						>
 							<X size={22} color="#9CA3AF" />
 						</TouchableOpacity>
 					</View>
 					{loadingModal ? (
-						<ActivityIndicator color="#8B1A1A" style={{ paddingVertical: 32 }} />
+						<ActivityIndicator
+							color="#8B1A1A"
+							style={{ paddingVertical: 32 }}
+						/>
 					) : (
 						<ScrollView showsVerticalScrollIndicator={false}>
 							{reviewsList.length === 0 ? (
@@ -547,10 +588,13 @@ export default function GuideInbox() {
 									>
 										<View className="flex-row justify-between mb-1">
 											<Text className="font-semibold text-text">
-												{(r.profiles as any)?.full_name || "Anonymous"}
+												{(r.profiles as any)
+													?.full_name || "Anonymous"}
 											</Text>
 											<Text className="text-xs text-text-secondary">
-												{new Date(r.created_at).toLocaleDateString()}
+												{new Date(
+													r.created_at,
+												).toLocaleDateString()}
 											</Text>
 										</View>
 										<View className="flex-row mb-1">
@@ -558,7 +602,10 @@ export default function GuideInbox() {
 												<Text
 													key={n}
 													style={{
-														color: n <= r.rating ? "#F4A261" : "#E5E7EB",
+														color:
+															n <= r.rating
+																? "#F4A261"
+																: "#E5E7EB",
 														fontSize: 14,
 													}}
 												>
