@@ -179,6 +179,7 @@ CREATE TABLE public.guide_profiles (
   price_negotiable        boolean DEFAULT false,
   ntb_license_url         text,
   ntb_license_status      text DEFAULT 'not_submitted',
+  area_prices             jsonb DEFAULT '{}'::jsonb,
   created_at              timestamptz DEFAULT now(),
   updated_at              timestamptz DEFAULT now()
 );
@@ -293,6 +294,7 @@ CREATE TABLE public.bookings (
   payment_status       public.payment_status DEFAULT 'pending',
   payment_method       text,
   payment_transaction_id text,
+  selected_areas       text[] DEFAULT '{}',
   created_at           timestamptz DEFAULT now(),
   updated_at           timestamptz DEFAULT now()
 );
@@ -725,7 +727,7 @@ VALUES
  'Sacred UNESCO Hindu temple complex on the Bagmati River.',
  'Kathmandu', 'Bagmati', ARRAY['spiritual','cultural']::public.trip_category[],
  27.7104, 85.3487, 1336,
- 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800',
+ 'https://unsplash.com/photos/a-group-of-people-standing-in-front-of-a-building-R2sI4cwPXqQ',
  'easy', 3, 1000, 3000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar'], ARRAY['unesco','hindu','heritage','shiva'], true, true),
 
@@ -734,7 +736,7 @@ VALUES
  'One of the world''s largest Buddhist stupas.',
  'Kathmandu', 'Bagmati', ARRAY['spiritual','cultural','photography']::public.trip_category[],
  27.7215, 85.3620, 1400,
- 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
+ 'https://unsplash.com/photos/white-and-gold-concrete-building-under-blue-sky-during-daytime-YtEzq-hnv5k',
  'easy', 2, 400, 2000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr'], ARRAY['unesco','buddhist','stupa','heritage'], true, true),
 
@@ -743,7 +745,7 @@ VALUES
  'Ancient hilltop temple with panoramic Kathmandu Valley views.',
  'Kathmandu', 'Bagmati', ARRAY['spiritual','cultural','sightseeing']::public.trip_category[],
  27.7149, 85.2904, 1336,
- 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800',
+ 'https://unsplash.com/photos/a-group-of-buildings-with-a-sky-in-the-background-Dk8jPwMPtAk',
  'easy', 2, 200, 1500,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'], ARRAY['monkey-temple','buddhist','panorama','hindu'], true, true),
 
@@ -752,7 +754,7 @@ VALUES
  'Serene lake with Annapurna reflections & adventure sports gateway.',
  'Kaski', 'Gandaki', ARRAY['adventure','sightseeing','photography']::public.trip_category[],
  28.2096, 83.9509, 742,
- 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800',
+ 'https://unsplash.com/photos/a-group-of-boats-floating-on-top-of-a-lake-qp8TLTaXMn8',
  'easy', 4, 0, 4000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr'], ARRAY['lake','annapurna','paragliding','pokhara'], true, true),
 
@@ -761,7 +763,7 @@ VALUES
  'High-altitude base camp trek with stunning Himalayan panoramas.',
  'Kaski', 'Gandaki', ARRAY['trekking','adventure','photography']::public.trip_category[],
  28.5302, 83.8773, 4130,
- 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+ 'https://unsplash.com/photos/a-beautiful-shot-of-mount-everest-with-prayer-flags-in-the-foreground-4uua9sUkSBo',
  'hard', 192, 3000, 80000,
  ARRAY['Oct','Nov','Dec','Mar','Apr','May'], ARRAY['annapurna','himalaya','trek','sanctuary'], true, true),
 
@@ -770,7 +772,7 @@ VALUES
  'UNESCO wildlife park with rhinos, tigers & elephant safaris.',
  'Chitwan', 'Madhesh', ARRAY['wildlife','adventure','photography']::public.trip_category[],
  27.5291, 84.4333, 150,
- 'https://images.unsplash.com/photo-1535941339077-2dd1c7963098?w=800',
+ 'https://unsplash.com/photos/four-person-riding-elephant-during-daytime-QU36RaoCM-Q',
  'easy', 6, 1500, 15000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr'], ARRAY['safari','rhino','tiger','unesco','jungle'], true, true),
 
@@ -779,7 +781,7 @@ VALUES
  'UNESCO-listed birthplace of the Buddha with international monasteries.',
  'Rupandehi', 'Lumbini', ARRAY['spiritual','cultural']::public.trip_category[],
  27.4833, 83.2764, 150,
- 'https://images.unsplash.com/photo-1548013146-72479768bada?w=800',
+ 'https://unsplash.com/photos/a-large-white-building-sitting-next-to-a-body-of-water-dZmL7oZy098',
  'easy', 5, 500, 5000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'], ARRAY['buddha','unesco','pilgrimage','spiritual'], true, true),
 
@@ -788,7 +790,7 @@ VALUES
  'World-famous trek to the base of the highest mountain on Earth.',
  'Solukhumbu', 'Koshi', ARRAY['trekking','adventure','photography']::public.trip_category[],
  27.9946, 86.8527, 5364,
- 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',
+ 'https://unsplash.com/photos/a-large-rock-with-writing-on-it-in-front-of-a-mountain--I64We8WuBs',
  'expert', 336, 7500, 200000,
  ARRAY['Mar','Apr','May','Oct','Nov'], ARRAY['everest','himalaya','sherpa','ebc','trek'], true, true),
 
@@ -797,7 +799,7 @@ VALUES
  'Medieval Newari city with UNESCO-listed durbar square.',
  'Bhaktapur', 'Bagmati', ARRAY['cultural','sightseeing','photography']::public.trip_category[],
  27.6710, 85.4298, 1401,
- 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800',
+ 'https://unsplash.com/photos/a-group-of-buildings-that-are-next-to-each-other-H9C496Nfd7Q',
  'easy', 4, 1500, 3000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'], ARRAY['unesco','newari','heritage','architecture'], true, true),
 
@@ -806,7 +808,7 @@ VALUES
  'Iconic Himalayan sunrise viewpoint at 3,210m altitude.',
  'Myagdi', 'Gandaki', ARRAY['trekking','sightseeing','photography']::public.trip_category[],
  28.3961, 83.6924, 3210,
- 'https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=800',
+ 'https://unsplash.com/photos/a-bunch-of-colorful-flags-are-hanging-in-front-of-a-mountain-aBX7Otg1oh8',
  'moderate', 48, 2000, 30000,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr'], ARRAY['sunrise','poon-hill','annapurna','ghorepani','trek'], true, true),
 
@@ -815,7 +817,7 @@ VALUES
  'Scenic valley trek through Tamang villages near Kathmandu.',
  'Rasuwa', 'Bagmati', ARRAY['trekking','adventure','cultural']::public.trip_category[],
  28.2093, 85.5140, 3430,
- 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+ 'https://unsplash.com/photos/a-snow-covered-mountain-with-a-blue-sky-in-the-background--fq2UH77F6c',
  'moderate', 96, 3000, 50000,
  ARRAY['Mar','Apr','May','Oct','Nov','Dec'], ARRAY['langtang','tamang','valley','trek','himalaya'], false, true),
 
@@ -824,7 +826,7 @@ VALUES
  'Nepal''s largest pristine lake in remote far-western mountains.',
  'Mugu', 'Karnali', ARRAY['trekking','wildlife','photography']::public.trip_category[],
  29.5167, 82.0833, 2990,
- 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800',
+ 'https://unsplash.com/photos/calm-water-at-daytime-ILWZWWfT_Co',
  'moderate', 120, 3000, 60000,
  ARRAY['Apr','May','Sep','Oct','Nov'], ARRAY['rara','lake','remote','pristine','karnali'], false, true),
 
@@ -833,7 +835,7 @@ VALUES
  'Ancient forbidden kingdom with cave monasteries and desert landscapes.',
  'Mustang', 'Gandaki', ARRAY['cultural','trekking','adventure']::public.trip_category[],
  29.1800, 83.9600, 3800,
- 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800',
+ 'https://unsplash.com/photos/assorted-color-of-apparel-hanged-below-creek-across-glacier-mountain-dstd4DoLQ90',
  'hard', 144, 50000, 150000,
  ARRAY['Mar','Apr','May','Jun','Sep','Oct'], ARRAY['mustang','lo-manthang','forbidden','kingdom','tibet'], false, true),
 
@@ -842,7 +844,7 @@ VALUES
  'Sacred Himalayan lake at 4,380m, pilgrimage site of Lord Shiva.',
  'Rasuwa', 'Bagmati', ARRAY['spiritual','trekking','adventure']::public.trip_category[],
  28.1167, 85.4167, 4380,
- 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800',
+ 'https://unsplash.com/photos/people-on-beach-during-daytime-hialeYabeGI',
  'hard', 72, 3000, 40000,
  ARRAY['Jun','Jul','Aug','Sep','Oct'], ARRAY['gosainkunda','sacred','lake','shiva','pilgrimage'], false, true),
 
@@ -851,7 +853,7 @@ VALUES
  'Historic royal palace square with pagoda temples in old Kathmandu.',
  'Kathmandu', 'Bagmati', ARRAY['cultural','sightseeing','photography']::public.trip_category[],
  27.7043, 85.3068, 1310,
- 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800',
+ 'https://unsplash.com/photos/a-group-of-people-standing-in-front-of-a-building-FTxTyNog7BY',
  'easy', 3, 1000, 2500,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'], ARRAY['durbar-square','kumari','heritage','nepal','kathmandu'], true, true);
 
@@ -873,6 +875,10 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('chat-attachments', 'chat-attachments', FALSE, 20971520, ARRAY['image/jpeg','image/png','image/webp','image/gif','video/mp4','application/pdf'])
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('licensed', 'licensed', FALSE, 10485760, ARRAY['image/jpeg','image/png','image/webp','application/pdf'])
 ON CONFLICT (id) DO NOTHING;
 
 -- AVATARS — public read, owner write
@@ -906,6 +912,17 @@ CREATE POLICY "kyc_docs_upload_own"        ON storage.objects FOR INSERT TO auth
 CREATE POLICY "kyc_docs_read_own_or_admin" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'kyc-documents' AND ((storage.foldername(name))[1] = auth.uid()::TEXT OR public.is_admin()));
 CREATE POLICY "kyc_docs_update_own"        ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'kyc-documents' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 CREATE POLICY "kyc_docs_delete_own"        ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'kyc-documents' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
+
+-- LICENSED DOCUMENTS — guide owner + admin only
+DROP POLICY IF EXISTS "licensed_upload_own"        ON storage.objects;
+DROP POLICY IF EXISTS "licensed_read_own_or_admin" ON storage.objects;
+DROP POLICY IF EXISTS "licensed_update_own"        ON storage.objects;
+DROP POLICY IF EXISTS "licensed_delete_own"        ON storage.objects;
+
+CREATE POLICY "licensed_upload_own"        ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'licensed' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
+CREATE POLICY "licensed_read_own_or_admin" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'licensed' AND ((storage.foldername(name))[1] = auth.uid()::TEXT OR public.is_admin()));
+CREATE POLICY "licensed_update_own"        ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'licensed' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
+CREATE POLICY "licensed_delete_own"        ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'licensed' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 
 -- CHAT ATTACHMENTS — thread participants only
 DROP POLICY IF EXISTS "chat_attachments_upload_participant" ON storage.objects;

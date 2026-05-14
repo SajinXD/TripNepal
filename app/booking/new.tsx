@@ -23,10 +23,16 @@ export default function NewBookingScreen() {
   const [pickup, setPickup] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
 
-  // Derived pricing — per trip (guide rate × days), NOT per person
-  const ratePerDay = guide?.price_per_day ?? 3500;
-  const subtotal = parseInt(days || '0') * ratePerDay;
+  const areaMap: Record<string, number> = guide?.area_prices ?? {};
+  const hasAreaPricing = Object.keys(areaMap).length > 0;
+
+  // Sum of selected area daily rates; fallback to price_per_day when no per-area data
+  const baseRatePerDay = hasAreaPricing
+    ? selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? 0), 0)
+    : (guide?.price_per_day ?? 3500);
+  const subtotal = parseInt(days || '0') * baseRatePerDay;
   const serviceFee = Math.round(subtotal * 0.05);
   const total = subtotal + serviceFee;
 
@@ -34,7 +40,7 @@ export default function NewBookingScreen() {
     if (!guideId) return;
     supabase
       .from('guide_profiles')
-      .select('id, price_per_day, average_rating, total_reviews, languages_spoken, bio_long, profiles(full_name, avatar_url)')
+      .select('id, price_per_day, area_prices, service_areas, average_rating, total_reviews, languages_spoken, bio_long, profiles(full_name, avatar_url)')
       .eq('id', guideId)
       .single()
       .then(({ data }) => {
@@ -57,6 +63,10 @@ export default function NewBookingScreen() {
       Alert.alert('Error', 'No guide selected.');
       return;
     }
+    if (hasAreaPricing && selectedAreas.length === 0) {
+      Alert.alert('Select Area', 'Please select at least one service area to continue.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -76,11 +86,12 @@ export default function NewBookingScreen() {
           pickup_location: pickup.trim(),
           travelers_count: travelers,
           total_days: parseInt(days || '1'),
-          daily_rate_npr: ratePerDay,
+          daily_rate_npr: baseRatePerDay,
           subtotal_npr: subtotal,
           service_fee_npr: serviceFee,
           total_amount_npr: total,
           special_notes: notes.trim() || null,
+          selected_areas: selectedAreas.length ? selectedAreas : undefined,
           status: 'requested',
           payment_status: 'pending',
         })
@@ -136,16 +147,50 @@ export default function NewBookingScreen() {
                     <Text className="text-text-secondary text-xs ml-1">{guide.average_rating?.toFixed(1) || '0.0'} · {guide.total_reviews || 0} reviews</Text>
                   </View>
                 </View>
-                <View className="items-end">
-                  <Text className="font-display text-primary text-lg">रू {guide.price_per_day?.toLocaleString()}</Text>
-                  <Text className="text-text-secondary text-xs">per day</Text>
-                </View>
               </View>
               {guide.languages_spoken?.length > 0 && (
                 <Text className="text-text-muted text-xs">🌐 {guide.languages_spoken.join(', ')}</Text>
               )}
             </View>
           ) : null}
+
+          {/* Area Picker — only when guide has per-area pricing */}
+          {!loadingGuide && hasAreaPricing && (guide?.service_areas ?? []).length > 0 && (
+            <View className="mb-5">
+              <Text className="font-semibold text-sm text-text mb-2">
+                Select Areas <Text className="font-normal text-text-muted">(tap all you'll visit)</Text>
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {(guide.service_areas as string[]).map(area => {
+                  const price = areaMap[area];
+                  const active = selectedAreas.includes(area);
+                  return (
+                    <TouchableOpacity
+                      key={area}
+                      onPress={() => setSelectedAreas(prev =>
+                        prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
+                      )}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: active ? '#8B1A1A' : '#E5E7EB',
+                        backgroundColor: active ? '#8B1A1A' : '#fff',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : '#0A0A0A' }}>{area}</Text>
+                      {price ? (
+                        <Text style={{ fontSize: 10, marginTop: 2, color: active ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>
+                          रू {price.toLocaleString()}/day
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
           {/* Duration */}
           <View className="mb-5">
@@ -246,8 +291,17 @@ export default function NewBookingScreen() {
           {/* Price breakdown */}
           <View className="bg-mint/20 border border-mint rounded-2xl p-5 mb-8">
             <Text className="font-semibold text-text mb-4">Price Summary</Text>
+
+            {/* Per-area breakdown */}
+            {hasAreaPricing && selectedAreas.length > 0 && selectedAreas.map(area => (
+              <View key={area} className="flex-row justify-between mb-1">
+                <Text className="text-text-secondary text-xs">{area}</Text>
+                <Text className="text-text text-xs">रू {(areaMap[area] ?? 0).toLocaleString()}/day</Text>
+              </View>
+            ))}
+
             <View className="flex-row justify-between mb-2">
-              <Text className="text-text-secondary text-sm">रू {ratePerDay.toLocaleString()} × {days || 0} days</Text>
+              <Text className="text-text-secondary text-sm">रू {baseRatePerDay.toLocaleString()} × {days || 0} days</Text>
               <Text className="text-text font-medium text-sm">रू {subtotal.toLocaleString()}</Text>
             </View>
             <View className="flex-row justify-between mb-4">

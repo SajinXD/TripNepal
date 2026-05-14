@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search, MapPin, MessageSquare, Star } from 'lucide-react-native';
+import { Search, MapPin, MessageSquare, Star, SlidersHorizontal, X } from 'lucide-react-native';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Card } from '../../src/components/ui/Card';
 import { Avatar } from '../../src/components/ui/Avatar';
@@ -33,6 +33,20 @@ const FILTERS = [
   { label: 'Chitwan', district: 'Chitwan' },
 ];
 
+const ALL_AREAS = [
+  'Kathmandu', 'Pokhara', 'Chitwan', 'Bhaktapur', 'Patan (Lalitpur)',
+  'Nagarkot', 'Dhulikhel', 'Bandipur', 'Solukhumbu (Everest)',
+  'Kaski (Annapurna)', 'Mustang', 'Langtang', 'Manaslu', 'Kanchenjunga',
+  'Dolpo', 'Poon Hill (Ghorepani)', 'Jomsom', 'Rara Lake', 'Bardiya',
+  'Ilam', 'Lumbini', 'Gorkha', 'Tansen (Palpa)', 'Dharan', 'Biratnagar',
+  'Butwal', 'Nepalgunj', 'Dhangadhi',
+];
+
+const ALL_SPECS = [
+  'trekking', 'cultural', 'adventure', 'wildlife', 'spiritual',
+  'photography', 'sightseeing', 'food', 'local', 'other',
+];
+
 export default function FindGuideScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -44,6 +58,16 @@ export default function FindGuideScreen() {
   const [activeFilter, setActiveFilter] = useState(0);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 10;
+
+  // Filter modal state
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterNegotiable, setFilterNegotiable] = useState(false);
+  const [filterLocal, setFilterLocal] = useState(false);
+  const [filterLicensed, setFilterLicensed] = useState(false);
+  const [filterAreas, setFilterAreas] = useState<string[]>([]);
+  const [filterSpecs, setFilterSpecs] = useState<string[]>([]);
+
+  const hasActiveFilter = filterNegotiable || filterLocal || filterLicensed || filterAreas.length > 0 || filterSpecs.length > 0;
 
   const loadGuides = useCallback(async (reset = false) => {
     const currentPage = reset ? 0 : page;
@@ -76,6 +100,37 @@ export default function FindGuideScreen() {
         );
       }
 
+      // Area filter
+      if (filterAreas.length) {
+        results = results.filter(g =>
+          filterAreas.some(a =>
+            g.operating_districts?.some((d: string) => d.toLowerCase().includes(a.toLowerCase()))
+          )
+        );
+      }
+
+      // Specialization filter
+      if (filterSpecs.length) {
+        results = results.filter(g =>
+          filterSpecs.some(s => g.specializations?.includes(s))
+        );
+      }
+
+      // Local guide filter
+      if (filterLocal) {
+        results = results.filter(g => g.specializations?.includes('local'));
+      }
+
+      // Negotiable / Licensed — secondary query for guide_profiles flags
+      if (filterNegotiable || filterLicensed) {
+        let q = (supabase.from('guide_profiles') as any).select('id');
+        if (filterNegotiable) q = q.eq('price_negotiable', true);
+        if (filterLicensed) q = q.eq('is_verified', true);
+        const { data: gpIds } = await q;
+        const ids = new Set((gpIds ?? []).map((r: any) => r.id));
+        results = results.filter(g => ids.has(g.id));
+      }
+
       if (reset) {
         setGuides(results.slice(0, PAGE_SIZE));
       } else {
@@ -85,7 +140,7 @@ export default function FindGuideScreen() {
 
     setLoading(false);
     setRefreshing(false);
-  }, [activeFilter, search, page]);
+  }, [activeFilter, search, page, filterNegotiable, filterLocal, filterLicensed, filterAreas, filterSpecs]);
 
   useEffect(() => {
     loadGuides(true);
@@ -116,18 +171,34 @@ export default function FindGuideScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#8B1A1A" />}
       >
-        {/* Search */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, height: 48, marginBottom: 14 }}>
-          <Search size={20} color="#717973" />
-          <TextInput
-            style={{ flex: 1, fontSize: 15, color: '#1A1C1E', marginLeft: 10 }}
-            placeholder="Search by name, region or specialty..."
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
+        {/* Search + Filter button */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, height: 48 }}>
+            <Search size={20} color="#717973" />
+            <TextInput
+              style={{ flex: 1, fontSize: 15, color: '#1A1C1E', marginLeft: 10 }}
+              placeholder="Search by name, region or specialty..."
+              placeholderTextColor="#9CA3AF"
+              value={search}
+              onChangeText={setSearch}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+          </View>
+          <Pressable
+            onPress={() => setShowFilter(true)}
+            style={{
+              width: 48, height: 48,
+              backgroundColor: hasActiveFilter ? '#8B1A1A' : '#fff',
+              borderWidth: 1,
+              borderColor: hasActiveFilter ? '#8B1A1A' : '#E5E7EB',
+              borderRadius: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <SlidersHorizontal size={20} color={hasActiveFilter ? '#fff' : '#717973'} />
+          </Pressable>
         </View>
 
         {/* Filter chips */}
@@ -235,7 +306,7 @@ export default function FindGuideScreen() {
                 <Button
                   variant="primary"
                   className="flex-1 mr-2 h-[44px]"
-                  onPress={(e) => { router.push(`/booking/new?guideId=${guide.id}` as any); }}
+                  onPress={() => { router.push(`/booking/new?guideId=${guide.id}` as any); }}
                 >
                   Book Now
                 </Button>
@@ -243,7 +314,7 @@ export default function FindGuideScreen() {
                   variant="secondary"
                   className="flex-1 ml-2 h-[44px]"
                   leftIcon={<MessageSquare size={16} color="#0077B6" />}
-                  onPress={(e) => { router.push(`/booking/new?guideId=${guide.id}` as any); }}
+                  onPress={() => { router.push(`/booking/new?guideId=${guide.id}` as any); }}
                 >
                   Message
                 </Button>
@@ -262,6 +333,113 @@ export default function FindGuideScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal visible={showFilter} transparent animationType="slide" onRequestClose={() => setShowFilter(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setShowFilter(false)} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' }}>
+
+          {/* Header */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ fontWeight: '700', fontSize: 18, color: '#1A1C1E' }}>Filter Guides</Text>
+            <Pressable onPress={() => setShowFilter(false)}>
+              <X size={22} color="#9CA3AF" />
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+
+            {/* Section 1: Guide Type */}
+            <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>GUIDE TYPE</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              {[
+                { label: 'Negotiable', state: filterNegotiable, set: setFilterNegotiable },
+                { label: 'Local',      state: filterLocal,      set: setFilterLocal },
+                { label: 'Licensed',   state: filterLicensed,   set: setFilterLicensed },
+              ].map(({ label, state, set }) => (
+                <Pressable
+                  key={label}
+                  onPress={() => set(!state)}
+                  style={{
+                    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+                    backgroundColor: state ? '#8B1A1A' : '#F3F4F6',
+                    borderWidth: 1, borderColor: state ? '#8B1A1A' : '#E5E7EB',
+                  }}
+                >
+                  <Text style={{ color: state ? '#fff' : '#1A1C1E', fontWeight: '600', fontSize: 13 }}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Section 2: Areas */}
+            <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>AREAS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+              {ALL_AREAS.map(area => {
+                const active = filterAreas.includes(area);
+                return (
+                  <Pressable
+                    key={area}
+                    onPress={() => setFilterAreas(prev => active ? prev.filter(a => a !== area) : [...prev, area])}
+                    style={{
+                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                      backgroundColor: active ? '#0077B6' : '#F3F4F6',
+                      borderWidth: 1, borderColor: active ? '#0077B6' : '#E5E7EB',
+                    }}
+                  >
+                    <Text style={{ color: active ? '#fff' : '#1A1C1E', fontSize: 12, fontWeight: '600' }}>{area}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Section 3: Specialization */}
+            <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>SPECIALIZATION</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+              {ALL_SPECS.map(spec => {
+                const active = filterSpecs.includes(spec);
+                return (
+                  <Pressable
+                    key={spec}
+                    onPress={() => setFilterSpecs(prev => active ? prev.filter(s => s !== spec) : [...prev, spec])}
+                    style={{
+                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                      backgroundColor: active ? '#8B1A1A' : '#F3F4F6',
+                      borderWidth: 1, borderColor: active ? '#8B1A1A' : '#E5E7EB',
+                    }}
+                  >
+                    <Text style={{ color: active ? '#fff' : '#1A1C1E', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>
+                      {spec.replace('_', ' ')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Clear + Apply */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => {
+                  setFilterNegotiable(false);
+                  setFilterLocal(false);
+                  setFilterLicensed(false);
+                  setFilterAreas([]);
+                  setFilterSpecs([]);
+                }}
+                style={{ flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ fontWeight: '600', color: '#1A1C1E' }}>Clear All</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setShowFilter(false); loadGuides(true); }}
+                style={{ flex: 2, height: 48, borderRadius: 12, backgroundColor: '#8B1A1A', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ fontWeight: '700', color: '#fff' }}>Apply Filters</Text>
+              </Pressable>
+            </View>
+
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -225,7 +225,7 @@ export default function LoginScreen() {
 								className="flex-1 ml-2 bg-white"
 								textClassName="text-on-surface"
 							>
-								Apple
+								Facebook
 							</Button>
 						</View>
 

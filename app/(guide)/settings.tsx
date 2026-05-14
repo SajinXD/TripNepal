@@ -440,9 +440,8 @@ export default function GuideSettingsScreen() {
 							</View>
 						</View>
 					) : (
-						// Clickable for not_submitted / rejected
-						<Pressable
-							onPress={() => router.push("/kyc" as any)}
+						// Non-clickable for not_submitted / rejected
+						<View
 							style={{
 								backgroundColor: "#FEE2E2",
 								borderRadius: 12,
@@ -459,12 +458,8 @@ export default function GuideSettingsScreen() {
 										? "Verification Rejected — Resubmit"
 										: "Complete KYC Verification"}
 								</Text>
-								<Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
-									Tap to submit your documents
-								</Text>
 							</View>
-							<ChevronRight size={18} color="#9CA3AF" />
-						</Pressable>
+						</View>
 					)
 				)}
 
@@ -748,7 +743,7 @@ export default function GuideSettingsScreen() {
 								KYC Verification
 							</Text>
 							<Text style={{ fontSize: 13, color: "#717973" }}>
-								Citizenship, license, documents
+								Identity verification
 							</Text>
 						</View>
 						<ChevronRight size={20} color="#717973" />

@@ -45,29 +45,38 @@ export default function KYCWizard() {
   }
 
   // Step 3 — Service setup
-  const [dailyRate, setDailyRate] = useState('');
+  const [areaPrices, setAreaPrices] = useState<Record<string, string>>({});
   const [languages, setLanguages] = useState('English, Nepali');
   const [bio, setBio] = useState('');
   const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
 
   const SPECIALIZATIONS = [
-    { key: 'trekking', label: '🥾 Trekking', rate: '4,000–6,000' },
-    { key: 'cultural', label: '🏛️ Cultural', rate: '2,500–3,500' },
-    { key: 'adventure', label: '🪂 Adventure', rate: '4,000–7,000' },
-    { key: 'wildlife', label: '🐘 Wildlife', rate: '3,000–5,000' },
-    { key: 'spiritual', label: '🙏 Spiritual', rate: '2,500–3,500' },
-    { key: 'photography', label: '📷 Photography', rate: '3,500–5,000' },
-    { key: 'sightseeing', label: '🗺️ Sightseeing', rate: '2,000–3,500' },
-    { key: 'food', label: '🍜 Food Tour', rate: '2,000–3,000' },
-    { key: 'local', label: '📍 Local Guide', rate: '1,500–3,000' },
-    { key: 'other', label: '✨ Other', rate: '2,000–4,000' },
+    { key: 'trekking',     label: '🥾 Trekking' },
+    { key: 'cultural',     label: '🏛️ Cultural' },
+    { key: 'adventure',    label: '🪂 Adventure' },
+    { key: 'wildlife',     label: '🐘 Wildlife' },
+    { key: 'spiritual',    label: '🙏 Spiritual' },
+    { key: 'photography',  label: '📷 Photography' },
+    { key: 'sightseeing',  label: '🗺️ Sightseeing' },
+    { key: 'food',         label: '🍜 Food Tour' },
+    { key: 'local',        label: '📍 Local Guide' },
+    { key: 'other',        label: '✨ Other' },
   ];
 
   const SERVICE_AREAS = [
-    'Kathmandu', 'Pokhara', 'Chitwan', 'Solukhumbu (Everest)',
-    'Kaski (Annapurna)', 'Mustang', 'Langtang', 'Manaslu',
-    'Ilam', 'Bardiya', 'Lumbini', 'Bandipur',
+    // Core cities & valleys
+    'Kathmandu', 'Pokhara', 'Chitwan', 'Bhaktapur', 'Patan (Lalitpur)',
+    'Nagarkot', 'Dhulikhel', 'Bandipur',
+    // Trekking regions
+    'Solukhumbu (Everest)', 'Kaski (Annapurna)', 'Mustang', 'Langtang',
+    'Manaslu', 'Kanchenjunga', 'Dolpo', 'Poon Hill (Ghorepani)',
+    'Jomsom', 'Rolwaling', 'Rara Lake',
+    // Wildlife & plains
+    'Bardiya', 'Ilam', 'Lumbini',
+    // Other towns
+    'Gorkha', 'Tansen (Palpa)', 'Dharan', 'Biratnagar', 'Butwal',
+    'Nepalgunj', 'Dhangadhi',
   ];
 
   function toggleSpecialization(key: string) {
@@ -77,19 +86,19 @@ export default function KYCWizard() {
   }
 
   function toggleArea(area: string) {
-    setSelectedAreas(prev =>
-      prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
-    );
-  }
-
-  function suggestedRate(): string {
-    if (selectedSpecializations.includes('trekking') && selectedAreas.some(a => a.includes('Everest') || a.includes('Manaslu'))) return '5,000–7,000';
-    if (selectedSpecializations.includes('trekking') || selectedSpecializations.includes('adventure')) return '4,000–6,000';
-    if (selectedSpecializations.includes('wildlife')) return '3,000–5,000';
-    if (selectedSpecializations.includes('cultural') || selectedSpecializations.includes('spiritual')) return '2,500–3,500';
-    if (selectedSpecializations.includes('sightseeing') || selectedSpecializations.includes('food')) return '2,000–3,000';
-    if (selectedSpecializations.includes('local')) return '1,500–3,000';
-    return '3,000–5,000';
+    setSelectedAreas(prev => {
+      const next = prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area];
+      setAreaPrices(prices => {
+        const updated = { ...prices };
+        if (!prev.includes(area)) {
+          updated[area] = '';
+        } else {
+          delete updated[area];
+        }
+        return updated;
+      });
+      return next;
+    });
   }
 
   function validateStep(): boolean {
@@ -110,16 +119,20 @@ export default function KYCWizard() {
       }
     }
     if (step === 3) {
-      if (!dailyRate || isNaN(Number(dailyRate)) || Number(dailyRate) <= 0) {
-        Alert.alert('Invalid Rate', 'Please enter a valid daily rate in NPR.');
-        return false;
-      }
       if (selectedSpecializations.length === 0) {
         Alert.alert('Select Specializations', 'Please select at least one service type.');
         return false;
       }
       if (selectedAreas.length === 0) {
         Alert.alert('Select Service Areas', 'Please select at least one area you serve.');
+        return false;
+      }
+      const hasValidPrice = selectedAreas.every(a => {
+        const v = Number(areaPrices[a]);
+        return !isNaN(v) && v > 0;
+      });
+      if (!hasValidPrice) {
+        Alert.alert('Missing Prices', 'Please enter a daily rate for every selected area.');
         return false;
       }
     }
@@ -131,10 +144,15 @@ export default function KYCWizard() {
     setLoading(true);
 
     try {
+      const areaNumbers: Record<string, number> = {};
+      selectedAreas.forEach(a => { areaNumbers[a] = parseFloat(areaPrices[a]) || 0; });
+      const avgPrice = Object.values(areaNumbers).reduce((s, v) => s + v, 0) / (selectedAreas.length || 1);
+
       await (supabase.from('guide_profiles') as any)
         .upsert({
           id: user.id,
-          price_per_day: dailyRate ? parseFloat(dailyRate) : undefined,
+          price_per_day: Math.round(avgPrice),
+          area_prices: areaNumbers,
           languages_spoken: languages.split(',').map(l => l.trim().toLowerCase()).filter(Boolean),
           bio_long: bio.trim() || null,
           specializations: selectedSpecializations.length ? selectedSpecializations : undefined,
@@ -342,7 +360,6 @@ export default function KYCWizard() {
                       className={`px-3 py-2 rounded-xl border ${active ? 'bg-primary border-primary' : 'bg-white border-border'}`}
                     >
                       <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-text'}`}>{s.label}</Text>
-                      <Text className={`text-[10px] mt-0.5 ${active ? 'text-white/80' : 'text-text-muted'}`}>NPR {s.rate}/day</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -365,24 +382,28 @@ export default function KYCWizard() {
                 })}
               </View>
 
-              {/* Smart rate suggestion */}
-              {selectedSpecializations.length > 0 && (
-                <View className="bg-mint/30 border border-mint rounded-xl p-4 mb-4">
-                  <Text className="font-semibold text-text text-sm mb-1">💡 Suggested Rate for Your Profile</Text>
-                  <Text className="text-primary font-bold text-xl">NPR {suggestedRate()}/day</Text>
-                  <Text className="text-text-secondary text-xs mt-1">Based on your specializations and service areas. You can adjust below.</Text>
+              {/* Per-area price inputs */}
+              {selectedAreas.length > 0 && (
+                <View className="mb-5">
+                  <Text className="font-semibold text-sm text-text mb-3">
+                    Set Your Daily Rate Per Area (NPR) *
+                  </Text>
+                  {selectedAreas.map(area => (
+                    <View key={area} className="flex-row items-center bg-white border border-border rounded-xl px-4 mb-2">
+                      <Text className="flex-1 text-sm text-text py-3">{area}</Text>
+                      <TextInput
+                        value={areaPrices[area] ?? ''}
+                        onChangeText={val => setAreaPrices(prev => ({ ...prev, [area]: val }))}
+                        placeholder="e.g. 3500"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="numeric"
+                        style={{ width: 96, textAlign: 'right', paddingVertical: 12, color: '#0A0A0A', fontSize: 14 }}
+                      />
+                      <Text className="text-text-muted text-xs ml-1">/day</Text>
+                    </View>
+                  ))}
                 </View>
               )}
-
-              <Text className="font-semibold text-sm text-text mb-2">Your Daily Rate (NPR) *</Text>
-              <TextInput
-                value={dailyRate}
-                onChangeText={setDailyRate}
-                className="bg-white border border-border rounded-xl px-4 py-3 mb-4 text-text"
-                placeholder={selectedSpecializations.length > 0 ? `Suggested: ${suggestedRate().split('–')[0].trim()}` : "e.g. 3500"}
-                keyboardType="numeric"
-                placeholderTextColor="#9CA3AF"
-              />
 
               <Text className="font-semibold text-sm text-text mb-2">Languages Spoken *</Text>
               <TextInput
