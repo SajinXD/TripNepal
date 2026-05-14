@@ -7,7 +7,6 @@ import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { Card } from '../../src/components/ui/Card';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { Button } from '../../src/components/ui/Button';
-import { Chip } from '../../src/components/ui/Chip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/lib/supabase';
 
@@ -19,20 +18,13 @@ type Guide = {
   rating: number;
   review_count: number;
   total_trips: number;
-  price_per_day_npr: number;
   languages: string[];
   specializations: string[];
   operating_districts: string[];
   years_experience: number;
+  is_licensed?: boolean;
 };
 
-const FILTERS = [
-  { label: 'All Guides', district: null },
-  { label: 'Annapurna', district: 'Kaski' },
-  { label: 'Everest', district: 'Solukhumbu' },
-  { label: 'Kathmandu', district: 'Kathmandu' },
-  { label: 'Chitwan', district: 'Chitwan' },
-];
 
 const ALL_AREAS = [
   'Kathmandu', 'Pokhara', 'Chitwan', 'Bhaktapur', 'Patan (Lalitpur)',
@@ -57,7 +49,6 @@ export default function FindGuideScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState(0);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 10;
 
@@ -75,11 +66,9 @@ export default function FindGuideScreen() {
     const currentPage = reset ? 0 : page;
     if (reset) { setLoading(true); setPage(0); }
 
-    const district = FILTERS[activeFilter].district;
-
     // @ts-ignore — search_guides RPC is not in generated types
     const { data, error } = await (supabase.rpc as any)('search_guides', {
-      p_district: district ?? null,
+      p_district: null,
       p_languages: null,
       p_max_price: null,
       p_categories: null,
@@ -142,31 +131,21 @@ export default function FindGuideScreen() {
 
     setLoading(false);
     setRefreshing(false);
-  }, [activeFilter, search, page, filterNegotiable, filterLocal, filterLicensed, filterAreas, filterSpecs]);
+  }, [search, page, filterNegotiable, filterLocal, filterLicensed, filterAreas, filterSpecs]);
 
   useEffect(() => {
     loadGuides(true);
-  }, [activeFilter]);
+  }, []);
 
   async function handleMessageGuide(guideId: string) {
     if (!user) return;
     try {
-      const { data: existing } = await (supabase.from('chat_threads') as any)
-        .select('id')
-        .eq('tourist_id', user.id)
-        .eq('guide_id', guideId)
-        .is('booking_id', null)
-        .maybeSingle();
-      if (existing) {
-        router.push(`/chat/${existing.id}` as any);
-        return;
-      }
-      const { data: thread, error } = await (supabase.from('chat_threads') as any)
-        .insert({ tourist_id: user.id, guide_id: guideId })
-        .select('id')
-        .single();
+      const { data: threadId, error } = await (supabase.rpc as any)('find_or_create_chat_thread', {
+        p_tourist_id: user.id,
+        p_guide_id: guideId,
+      });
       if (error) throw error;
-      router.push(`/chat/${thread.id}` as any);
+      router.push(`/chat/${threadId}` as any);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Could not open chat.');
     }
@@ -227,20 +206,6 @@ export default function FindGuideScreen() {
           </Pressable>
         </View>
 
-        {/* Filter chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20 }}>
-          {FILTERS.map((f, i) => (
-            <Chip
-              key={f.label}
-              label={f.label}
-              selected={activeFilter === i}
-              icon={<MapPin size={13} color={activeFilter === i ? '#8B1A1A' : '#717973'} />}
-              onPress={() => setActiveFilter(i)}
-              className="mr-2"
-            />
-          ))}
-        </ScrollView>
-
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
           <Text style={{ fontWeight: '700', fontSize: 22, color: '#1A1C1E' }}>Certified Guides</Text>
@@ -278,7 +243,14 @@ export default function FindGuideScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 17, color: '#1A1C1E' }}>{guide.full_name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                      <Text style={{ fontWeight: '700', fontSize: 17, color: '#1A1C1E' }}>{guide.full_name}</Text>
+                      {guide.is_licensed && (
+                        <View style={{ backgroundColor: '#D1FAE5', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#065F46', letterSpacing: 0.5 }}>NTB LICENSED</Text>
+                        </View>
+                      )}
+                    </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
                       <Star size={13} color="#F4A261" fill="#F4A261" />
                       <Text style={{ fontSize: 13, color: '#1A1C1E', fontWeight: '600', marginLeft: 3 }}>
@@ -288,9 +260,6 @@ export default function FindGuideScreen() {
                         <Text style={{ fontSize: 12, color: '#717973', marginLeft: 4 }}>({guide.review_count} reviews)</Text>
                       )}
                     </View>
-                    <Text style={{ fontSize: 12, color: '#8B1A1A', fontWeight: '600', marginTop: 2 }}>
-                      रू {guide.price_per_day_npr?.toLocaleString() || '–'} / day
-                    </Text>
                   </View>
                 </View>
               </View>

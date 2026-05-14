@@ -148,7 +148,6 @@ function buildAppContext(destinations: any[], guides: any[]): string {
       const name = g.profiles?.full_name || 'Guide';
       const parts = [
         `**${name}**`,
-        g.price_per_day ? `NPR ${g.price_per_day}/day` : null,
         g.years_of_experience ? `${g.years_of_experience} yrs exp` : null,
         g.specializations?.length ? `specializes: ${g.specializations.join(', ')}` : null,
         g.service_areas?.length ? `covers: ${g.service_areas.join(', ')}` : null,
@@ -186,7 +185,7 @@ export default function AiPlanScreen() {
             .eq('is_active', true)
             .limit(40),
           (supabase.from('guide_profiles') as any)
-            .select('price_per_day, years_of_experience, specializations, service_areas, languages_spoken, profiles(full_name)')
+            .select('years_of_experience, specializations, service_areas, languages_spoken, profiles(full_name)')
             .eq('is_verified', true)
             .order('average_rating', { ascending: false })
             .limit(20),

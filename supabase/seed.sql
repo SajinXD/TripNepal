@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS public.bookings            CASCADE;
 DROP TABLE IF EXISTS public.saved_destinations  CASCADE;
 DROP TABLE IF EXISTS public.destinations        CASCADE;
 DROP TABLE IF EXISTS public.trip_plans          CASCADE;
+DROP TABLE IF EXISTS public.license_verifications CASCADE;
 DROP TABLE IF EXISTS public.kyc_documents       CASCADE;
 DROP TABLE IF EXISTS public.kyc_verifications   CASCADE;
 DROP TABLE IF EXISTS public.guide_profiles      CASCADE;
@@ -38,6 +39,7 @@ DROP FUNCTION IF EXISTS public.update_guide_rating()     CASCADE;
 DROP FUNCTION IF EXISTS public.recalc_guide_rating()     CASCADE;
 DROP FUNCTION IF EXISTS public.handle_booking_completed() CASCADE;
 DROP FUNCTION IF EXISTS public.update_chat_thread_on_message() CASCADE;
+DROP FUNCTION IF EXISTS public.sync_license_status()             CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin()                CASCADE;
 DROP FUNCTION IF EXISTS public.create_booking_with_thread(uuid,uuid,uuid,date,date,time,smallint,trip_category,text,text,numeric,numeric,numeric,numeric) CASCADE;
 DROP FUNCTION IF EXISTS public.search_guides(text,text[],numeric,trip_category[],float,float,int) CASCADE;
@@ -180,6 +182,7 @@ CREATE TABLE public.guide_profiles (
   ntb_license_url         text,
   ntb_license_status      text DEFAULT 'not_submitted',
   area_prices             jsonb DEFAULT '{}'::jsonb,
+  is_licensed             boolean DEFAULT false,
   created_at              timestamptz DEFAULT now(),
   updated_at              timestamptz DEFAULT now()
 );
@@ -188,6 +191,24 @@ CREATE INDEX idx_guide_verified  ON public.guide_profiles(is_verified);
 CREATE INDEX idx_guide_areas     ON public.guide_profiles USING gin(service_areas);
 CREATE INDEX idx_guide_languages ON public.guide_profiles USING gin(languages_spoken);
 CREATE INDEX idx_guide_location  ON public.guide_profiles(current_lat, current_lng);
+
+-- LICENSE VERIFICATIONS
+CREATE TABLE public.license_verifications (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  guide_id         uuid NOT NULL REFERENCES public.guide_profiles(id) ON DELETE CASCADE,
+  status           text NOT NULL DEFAULT 'not_submitted'
+                   CHECK (status IN ('not_submitted','pending','approved','rejected')),
+  license_number   text,
+  license_url      text,
+  submitted_at     timestamptz,
+  reviewed_at      timestamptz,
+  reviewed_by      uuid REFERENCES public.profiles(id),
+  rejection_reason text,
+  created_at       timestamptz DEFAULT now(),
+  updated_at       timestamptz DEFAULT now(),
+  UNIQUE(guide_id)
+);
+CREATE INDEX idx_license_guide ON public.license_verifications(guide_id);
 
 -- DESTINATIONS
 CREATE TABLE public.destinations (
@@ -338,7 +359,7 @@ CREATE TABLE public.chat_requests (
 -- CHAT THREADS
 CREATE TABLE public.chat_threads (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id      uuid UNIQUE REFERENCES public.bookings(id) ON DELETE CASCADE,
+  booking_id      uuid REFERENCES public.bookings(id) ON DELETE SET NULL,
   tourist_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   guide_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   last_message    text,
@@ -346,12 +367,11 @@ CREATE TABLE public.chat_threads (
   tourist_unread  int DEFAULT 0,
   guide_unread    int DEFAULT 0,
   created_at      timestamptz DEFAULT now(),
-  updated_at      timestamptz DEFAULT now()
+  updated_at      timestamptz DEFAULT now(),
+  UNIQUE(tourist_id, guide_id)
 );
 CREATE INDEX idx_chat_threads_tourist ON public.chat_threads(tourist_id);
 CREATE INDEX idx_chat_threads_guide   ON public.chat_threads(guide_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_threads_tourist_guide_no_booking
-  ON public.chat_threads (tourist_id, guide_id) WHERE booking_id IS NULL;
 
 -- CHAT MESSAGES
 CREATE TABLE public.chat_messages (
@@ -511,6 +531,21 @@ CREATE TRIGGER trg_booking_completed
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION public.handle_booking_completed();
 
+-- Sync license_verifications.status → guide_profiles.ntb_license_status
+CREATE OR REPLACE FUNCTION public.sync_license_status()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  UPDATE public.guide_profiles
+  SET ntb_license_status = NEW.status
+  WHERE id = NEW.guide_id;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_sync_license_status
+  AFTER INSERT OR UPDATE OF status ON public.license_verifications
+  FOR EACH ROW EXECUTE FUNCTION public.sync_license_status();
+
 -- Update chat thread on new message
 CREATE OR REPLACE FUNCTION public.update_chat_thread_on_message()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -534,14 +569,35 @@ CREATE TRIGGER trg_chat_message_inserted
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW EXECUTE FUNCTION public.update_chat_thread_on_message();
 
+-- Atomic find-or-create for chat threads (avoids upsert returning null on no-op)
+CREATE OR REPLACE FUNCTION public.find_or_create_chat_thread(
+  p_tourist_id uuid,
+  p_guide_id   uuid
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_id uuid;
+BEGIN
+  INSERT INTO public.chat_threads (tourist_id, guide_id)
+  VALUES (p_tourist_id, p_guide_id)
+  ON CONFLICT (tourist_id, guide_id) DO NOTHING;
+
+  SELECT id INTO v_id
+  FROM public.chat_threads
+  WHERE tourist_id = p_tourist_id AND guide_id = p_guide_id;
+
+  RETURN v_id;
+END;
+$$;
+
 -- ============================================================================
 -- SECTION 6: ROW LEVEL SECURITY
 -- ============================================================================
 
 ALTER TABLE public.profiles          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_verifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kyc_documents     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.guide_profiles    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kyc_documents          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.license_verifications  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.guide_profiles         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.destinations      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saved_destinations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trip_plans        ENABLE ROW LEVEL SECURITY;
@@ -571,6 +627,12 @@ CREATE POLICY "kyc_docs_select_own"  ON public.kyc_documents FOR SELECT TO authe
   USING (EXISTS (SELECT 1 FROM public.kyc_verifications WHERE id = kyc_id AND user_id = auth.uid()) OR public.is_admin());
 CREATE POLICY "kyc_docs_insert_own"  ON public.kyc_documents FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM public.kyc_verifications WHERE id = kyc_id AND user_id = auth.uid()));
+
+-- LICENSE VERIFICATIONS
+CREATE POLICY "license_guide_select" ON public.license_verifications FOR SELECT TO authenticated USING (guide_id = auth.uid());
+CREATE POLICY "license_guide_insert" ON public.license_verifications FOR INSERT TO authenticated WITH CHECK (guide_id = auth.uid());
+CREATE POLICY "license_guide_update" ON public.license_verifications FOR UPDATE TO authenticated USING (guide_id = auth.uid());
+CREATE POLICY "license_admin_all"    ON public.license_verifications FOR ALL    TO authenticated USING (public.is_admin());
 
 -- GUIDE PROFILES
 CREATE POLICY "guide_profiles_read_all"    ON public.guide_profiles FOR SELECT USING (TRUE);
@@ -668,7 +730,8 @@ RETURNS TABLE (
   years_experience    INT,
   current_lat         DOUBLE PRECISION,
   current_lng         DOUBLE PRECISION,
-  distance_km         FLOAT
+  distance_km         FLOAT,
+  is_licensed         BOOLEAN
 )
 LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
 BEGIN
@@ -684,7 +747,8 @@ BEGIN
       WHEN p_lat IS NOT NULL AND p_lng IS NOT NULL AND gp.current_lat IS NOT NULL AND gp.current_lng IS NOT NULL
       THEN (6371 * acos(LEAST(1.0, cos(radians(p_lat)) * cos(radians(gp.current_lat)) * cos(radians(gp.current_lng) - radians(p_lng)) + sin(radians(p_lat)) * sin(radians(gp.current_lat)))))
       ELSE NULL
-    END AS distance_km
+    END AS distance_km,
+    gp.is_licensed
   FROM public.guide_profiles gp
   JOIN public.profiles pr ON pr.id = gp.id
   WHERE

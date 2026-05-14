@@ -39,7 +39,7 @@ export default function BookingsScreen() {
     if (!user) return;
     // @ts-ignore
     const { data } = await (supabase.from('bookings') as any)
-      .select('*, guide_profiles(price_per_day, profiles(full_name, avatar_url))')
+      .select('*, guide_profiles(profiles(full_name, avatar_url))')
       .eq('tourist_id', user.id)
       .order('created_at', { ascending: false });
     setBookings(data || []);
@@ -60,24 +60,12 @@ export default function BookingsScreen() {
   async function handleMessageGuide(guideId: string) {
     if (!user) return;
     try {
-      // Find existing direct thread for this tourist-guide pair
-      const { data: existing } = await (supabase.from('chat_threads') as any)
-        .select('id')
-        .eq('tourist_id', user.id)
-        .eq('guide_id', guideId)
-        .is('booking_id', null)
-        .maybeSingle();
-      if (existing) {
-        router.push(`/chat/${existing.id}` as any);
-        return;
-      }
-      // Create a new direct thread
-      const { data: thread, error } = await (supabase.from('chat_threads') as any)
-        .insert({ tourist_id: user.id, guide_id: guideId })
-        .select('id')
-        .single();
+      const { data: threadId, error } = await (supabase.rpc as any)('find_or_create_chat_thread', {
+        p_tourist_id: user.id,
+        p_guide_id: guideId,
+      });
       if (error) throw error;
-      router.push(`/chat/${thread.id}` as any);
+      router.push(`/chat/${threadId}` as any);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Could not open chat.');
     }

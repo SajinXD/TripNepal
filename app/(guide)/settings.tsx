@@ -3,7 +3,6 @@ import {
 	ChevronDown,
 	ChevronRight,
 	ChevronUp,
-	DollarSign,
 	FileCheck,
 	FileText,
 	HelpCircle,
@@ -62,27 +61,34 @@ export default function GuideSettingsScreen() {
 		Promise.all([
 			(supabase.from("guide_profiles") as any)
 				.select(
-					"price_per_day, average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number, ntb_license_url, ntb_license_status",
+					"average_rating, total_reviews, total_trips_completed, is_verified, specializations, service_areas, price_negotiable, guide_license_number",
 				)
-				.eq("user_id", user.id)
+				.eq("id", user.id)
 				.single(),
 			supabase
 				.from("kyc_verifications")
 				.select("status")
 				.eq("user_id", user.id)
 				.single(),
-		]).then(([gp, kyc]: [any, any]) => {
+			(supabase.from("license_verifications") as any)
+				.select("status, license_number, license_url")
+				.eq("guide_id", user.id)
+				.maybeSingle(),
+		]).then(([gp, kyc, lv]: [any, any, any]) => {
 			const gpData = gp.data;
 			if (gpData) {
 				setGuideProfile(gpData);
 				setPriceNegotiable(gpData.price_negotiable ?? false);
 				setNtbLicenseNumber(gpData.guide_license_number ?? "");
-				setNtbLicenseUrl(gpData.ntb_license_url ?? null);
-				const status = gpData.ntb_license_status ?? "not_submitted";
-				setNtbLicenseStatus(status);
-				// Auto-expand form only when not yet submitted
-				setNtbExpanded(status === "not_submitted");
 			}
+			// License status from license_verifications table
+			const licStatus = lv.data?.status ?? "not_submitted";
+			setNtbLicenseStatus(licStatus);
+			if (lv.data?.license_url) setNtbLicenseUrl(lv.data.license_url);
+			if (lv.data?.license_number) setNtbLicenseNumber(lv.data.license_number ?? "");
+			// Auto-expand form only when not yet submitted
+			setNtbExpanded(licStatus === "not_submitted");
+
 			if (gpData?.is_verified) {
 				setKycStatus("approved");
 			} else if (
@@ -90,8 +96,6 @@ export default function GuideSettingsScreen() {
 				kyc.data.status !== "not_submitted"
 			) {
 				setKycStatus(kyc.data.status);
-			} else if (gpData?.price_per_day) {
-				setKycStatus("pending");
 			}
 			setLoading(false);
 		});
@@ -144,7 +148,7 @@ export default function GuideSettingsScreen() {
 		try {
 			const { error } = await (supabase.from("guide_profiles") as any)
 				.update({ price_negotiable: value })
-				.eq("user_id", user.id);
+				.eq("id", user.id);
 			if (error) throw error;
 		} catch (e: any) {
 			Alert.alert(
@@ -161,7 +165,7 @@ export default function GuideSettingsScreen() {
 		if (!user) return;
 		setUploadingNtb(true);
 		try {
-			const url = await pickAndUploadImage("kyc-documents", user.id);
+			const url = await pickAndUploadImage("licensed", user.id);
 			if (url) setNtbLicenseUrl(url);
 		} catch (e: any) {
 			Alert.alert(
@@ -184,20 +188,18 @@ export default function GuideSettingsScreen() {
 				);
 				return;
 			}
-			const { error } = await (supabase.from("guide_profiles") as any)
-				.update({
-					guide_license_number: ntbLicenseNumber.trim() || null,
-					ntb_license_url: ntbLicenseUrl,
-					ntb_license_status: "pending",
-				})
-				.eq("user_id", user.id);
+			const { error } = await (supabase.from("license_verifications") as any)
+				.upsert({
+					guide_id: user.id,
+					license_number: ntbLicenseNumber.trim() || null,
+					license_url: ntbLicenseUrl,
+					status: "pending",
+					submitted_at: new Date().toISOString(),
+				}, { onConflict: "guide_id" });
 			if (error) throw error;
 			setNtbLicenseStatus("pending");
 			setNtbExpanded(false);
-			Alert.alert(
-				"Submitted",
-				"Your NTB license is under review. This usually takes 1–2 business days.",
-			);
+			router.replace("/license/pending" as any);
 		} catch (e: any) {
 			Alert.alert("Error", e.message || "Could not save NTB details.");
 		} finally {
@@ -412,7 +414,7 @@ export default function GuideSettingsScreen() {
 										marginBottom: 4,
 									}}
 								>
-									RATE/DAY
+									AREAS
 								</Text>
 								<Text
 									style={{
@@ -421,9 +423,7 @@ export default function GuideSettingsScreen() {
 										color: "#8B1A1A",
 									}}
 								>
-									{guideProfile?.price_per_day
-										? `रू${(guideProfile.price_per_day / 1000).toFixed(1)}k`
-										: "—"}
+									{guideProfile?.service_areas?.length ?? 0}
 								</Text>
 							</View>
 						</View>
@@ -859,45 +859,6 @@ export default function GuideSettingsScreen() {
 							</Text>
 							<Text style={{ fontSize: 13, color: "#717973" }}>
 								Identity verification
-							</Text>
-						</View>
-						<ChevronRight size={20} color="#717973" />
-					</Pressable>
-					<Pressable
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							padding: 16,
-						}}
-						onPress={() =>
-							Alert.alert(
-								"Update Rate",
-								"Go to KYC to update your daily rate and service areas.",
-							)
-						}
-					>
-						<IconTile
-							icon={<DollarSign size={20} color="#8B1A1A" />}
-							variant="primary"
-							className="mr-3"
-						/>
-						<View style={{ flex: 1, marginLeft: 12 }}>
-							<Text
-								style={{
-									fontSize: 16,
-									fontWeight: "600",
-									color: "#1A1C1E",
-								}}
-							>
-								Daily Rate & Services
-							</Text>
-							<Text style={{ fontSize: 13, color: "#717973" }}>
-								{guideProfile?.price_per_day
-									? `रू ${Number(guideProfile.price_per_day).toLocaleString()}/day`
-									: "Not set"}
-								{guideProfile?.service_areas?.length
-									? ` · ${guideProfile.service_areas.slice(0, 2).join(", ")}`
-									: ""}
 							</Text>
 						</View>
 						<ChevronRight size={20} color="#717973" />

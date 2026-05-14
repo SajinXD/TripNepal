@@ -29,11 +29,8 @@ export default function NewBookingScreen() {
   const guideAreas: string[] = guide?.service_areas ?? [];
   const showAreaPicker = guideAreas.length > 0;
 
-  // Sum of selected area rates; per-area price if set, else guide's daily rate per area
-  const fallbackRate = guide?.price_per_day ?? 3500;
-  const baseRatePerDay = showAreaPicker && selectedAreas.length > 0
-    ? selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? fallbackRate), 0)
-    : fallbackRate;
+  // Price is purely area-based — sum of selected area daily rates
+  const baseRatePerDay = selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? 0), 0);
   const subtotal = parseInt(days || '0') * baseRatePerDay;
   const serviceFee = Math.round(subtotal * 0.05);
   const total = subtotal + serviceFee;
@@ -42,7 +39,7 @@ export default function NewBookingScreen() {
     if (!guideId) return;
     supabase
       .from('guide_profiles')
-      .select('id, price_per_day, area_prices, service_areas, average_rating, total_reviews, languages_spoken, bio_long, profiles(full_name, avatar_url)')
+      .select('id, area_prices, service_areas, average_rating, total_reviews, languages_spoken, bio_long, profiles(full_name, avatar_url)')
       .eq('id', guideId)
       .single()
       .then(({ data }) => {
@@ -294,26 +291,34 @@ export default function NewBookingScreen() {
           <View className="bg-mint/20 border border-mint rounded-2xl p-5 mb-8">
             <Text className="font-semibold text-text mb-4">Price Summary</Text>
 
-            {/* Per-area breakdown */}
-            {showAreaPicker && selectedAreas.length > 0 && selectedAreas.map(area => (
-              <View key={area} className="flex-row justify-between mb-1">
-                <Text className="text-text-secondary text-xs">{area}</Text>
-                <Text className="text-text text-xs">रू {(areaMap[area] ?? 0).toLocaleString()}/day</Text>
-              </View>
-            ))}
+            {showAreaPicker && selectedAreas.length === 0 ? (
+              <Text className="text-text-secondary text-sm text-center py-2">
+                Select areas above to see pricing
+              </Text>
+            ) : (
+              <>
+                {/* Per-area breakdown */}
+                {selectedAreas.map(area => (
+                  <View key={area} className="flex-row justify-between mb-1">
+                    <Text className="text-text-secondary text-xs">{area}</Text>
+                    <Text className="text-text text-xs">रू {(areaMap[area] ?? 0).toLocaleString()}/day</Text>
+                  </View>
+                ))}
 
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-text-secondary text-sm">रू {baseRatePerDay.toLocaleString()} × {days || 0} days</Text>
-              <Text className="text-text font-medium text-sm">रू {subtotal.toLocaleString()}</Text>
-            </View>
-            <View className="flex-row justify-between mb-4">
-              <Text className="text-text-secondary text-sm">Platform fee (5%)</Text>
-              <Text className="text-text font-medium text-sm">रू {serviceFee.toLocaleString()}</Text>
-            </View>
-            <View className="flex-row justify-between border-t border-mint/50 pt-3">
-              <Text className="font-bold text-text">Total</Text>
-              <Text className="font-display text-primary text-xl">रू {total.toLocaleString()}</Text>
-            </View>
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-text-secondary text-sm">रू {baseRatePerDay.toLocaleString()} × {days || 0} days</Text>
+                  <Text className="text-text font-medium text-sm">रू {subtotal.toLocaleString()}</Text>
+                </View>
+                <View className="flex-row justify-between mb-4">
+                  <Text className="text-text-secondary text-sm">Platform fee (5%)</Text>
+                  <Text className="text-text font-medium text-sm">रू {serviceFee.toLocaleString()}</Text>
+                </View>
+                <View className="flex-row justify-between border-t border-mint/50 pt-3">
+                  <Text className="font-bold text-text">Total</Text>
+                  <Text className="font-display text-primary text-xl">रू {total.toLocaleString()}</Text>
+                </View>
+              </>
+            )}
           </View>
 
         </ScrollView>

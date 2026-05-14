@@ -27,27 +27,13 @@ export default function BookingConfirmScreen() {
     if (!booking) return;
     setChatLoading(true);
     try {
-      // Find existing direct thread for this tourist-guide pair
-      const { data: existing } = await (supabase.from('chat_threads') as any)
-        .select('id')
-        .eq('tourist_id', booking.tourist_id)
-        .eq('guide_id', booking.guide_id)
-        .is('booking_id', null)
-        .maybeSingle();
-
-      if (existing) {
-        router.push(`/chat/${existing.id}` as any);
-        return;
-      }
-
-      // Create a new direct thread
-      const { data: newThread, error } = await (supabase.from('chat_threads') as any)
-        .insert({ tourist_id: booking.tourist_id, guide_id: booking.guide_id })
-        .select('id')
-        .single();
+      const { data: threadId, error } = await (supabase.rpc as any)('find_or_create_chat_thread', {
+        p_tourist_id: booking.tourist_id,
+        p_guide_id: booking.guide_id,
+      });
 
       if (error) throw error;
-      if (newThread) router.push(`/chat/${newThread.id}` as any);
+      if (threadId) router.push(`/chat/${threadId}` as any);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Could not open chat.');
     } finally {

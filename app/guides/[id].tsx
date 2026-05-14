@@ -18,8 +18,8 @@ type Guide = {
   bio_long?: string;
   bio_guide?: string;
   years_of_experience?: number;
-  price_per_day?: number;
   price_negotiable?: boolean;
+  is_licensed?: boolean;
   specializations?: string[];
   service_areas?: string[];
   languages_spoken?: string[];
@@ -111,27 +111,13 @@ export default function GuideDetailScreen() {
     if (!user) { Alert.alert('Sign in required', 'Please sign in to message this guide.'); return; }
     setMessageLoading(true);
     try {
-      // Find existing thread for this tourist+guide pair
-      const { data: existing } = await (supabase.from('chat_threads') as any)
-        .select('id')
-        .eq('tourist_id', user.id)
-        .eq('guide_id', id)
-        .limit(1)
-        .maybeSingle();
-
-      if (existing) {
-        router.push(`/chat/${existing.id}` as any);
-        return;
-      }
-
-      // Create new thread
-      const { data: thread, error } = await (supabase.from('chat_threads') as any)
-        .insert({ tourist_id: user.id, guide_id: id })
-        .select('id')
-        .single();
+      const { data: threadId, error } = await (supabase.rpc as any)('find_or_create_chat_thread', {
+        p_tourist_id: user.id,
+        p_guide_id: id,
+      });
 
       if (error) throw error;
-      router.push(`/chat/${thread.id}` as any);
+      router.push(`/chat/${threadId}` as any);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Could not open chat.');
     } finally {
@@ -231,12 +217,20 @@ export default function GuideDetailScreen() {
 
           <Text style={styles.guideName}>{name}</Text>
 
-          {guide.is_verified && (
-            <View style={styles.verifiedBadge}>
-              <Award size={12} color="#8B1A1A" />
-              <Text style={styles.verifiedText}>VERIFIED GUIDE</Text>
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {guide.is_verified && (
+              <View style={styles.verifiedBadge}>
+                <Award size={12} color="#8B1A1A" />
+                <Text style={styles.verifiedText}>VERIFIED GUIDE</Text>
+              </View>
+            )}
+            {guide.is_licensed && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D1FAE5', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Award size={12} color="#065F46" />
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#065F46', letterSpacing: 0.5 }}>NTB LICENSED</Text>
+              </View>
+            )}
+          </View>
 
           {rating > 0 ? (
             <View style={{ alignItems: 'center', marginTop: 8 }}>
@@ -268,10 +262,8 @@ export default function GuideDetailScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statCell}>
               <Briefcase size={18} color="#8B1A1A" />
-              <Text style={styles.statVal}>
-                {guide.price_per_day ? `NPR ${Number(guide.price_per_day).toLocaleString()}` : '—'}
-              </Text>
-              <Text style={styles.statLbl}>Per Day</Text>
+              <Text style={styles.statVal}>{guide.service_areas?.length ?? '—'}</Text>
+              <Text style={styles.statLbl}>Areas</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCell}>

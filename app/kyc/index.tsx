@@ -46,6 +46,7 @@ export default function KYCWizard() {
 	const [dateOfBirth, setDateOfBirth] = useState("");
 	const [showDOBPicker, setShowDOBPicker] = useState(false);
 	const [permanentAddress, setPermanentAddress] = useState("");
+	const [yearsExperience, setYearsExperience] = useState("");
 
 	// Step 2 — Documents (citizenship only; NTB license is in Guide Settings)
 	const [citizenshipPath, setCitizenshipPath] = useState<string | null>(null);
@@ -217,13 +218,10 @@ export default function KYCWizard() {
 			selectedAreas.forEach((a) => {
 				areaNumbers[a] = parseFloat(areaPrices[a]) || 0;
 			});
-			const avgPrice =
-				Object.values(areaNumbers).reduce((s, v) => s + v, 0) /
-				(selectedAreas.length || 1);
 
 			const guideProfile = {
-				price_per_day: Math.round(avgPrice),
 				area_prices: areaNumbers,
+				years_of_experience: parseInt(yearsExperience) || 0,
 				languages_spoken: languages
 					.split(",")
 					.map((l) => l.trim().toLowerCase())
@@ -439,10 +437,22 @@ export default function KYCWizard() {
 							<TextInput
 								value={permanentAddress}
 								onChangeText={setPermanentAddress}
-								className="bg-white border border-border rounded-xl px-4 py-3 mb-8 text-text"
+								className="bg-white border border-border rounded-xl px-4 py-3 mb-4 text-text"
 								placeholder="e.g. Lakeside-6, Pokhara, Kaski"
 								placeholderTextColor="#9CA3AF"
 								multiline
+							/>
+
+							<Text className="font-semibold text-sm text-text mb-2">
+								Years of Experience
+							</Text>
+							<TextInput
+								value={yearsExperience}
+								onChangeText={setYearsExperience}
+								className="bg-white border border-border rounded-xl px-4 py-3 mb-8 text-text"
+								placeholder="e.g. 5"
+								placeholderTextColor="#9CA3AF"
+								keyboardType="numeric"
 							/>
 						</View>
 					)}

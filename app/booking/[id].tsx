@@ -29,7 +29,7 @@ export default function BookingDetailScreen() {
     if (!id) return;
     // @ts-ignore
     (supabase.from('bookings') as any)
-      .select('*, tourist:profiles!tourist_id(full_name, phone), guide:guide_profiles!guide_id(price_per_day, profiles!id(full_name))')
+      .select('*, tourist:profiles!tourist_id(full_name, phone), guide:guide_profiles!guide_id(profiles!id(full_name))')
       .eq('id', id)
       .single()
       .then(({ data }: any) => { setBooking(data); setLoading(false); });
@@ -51,8 +51,8 @@ export default function BookingDetailScreen() {
       if (action === 'accepted') {
         // @ts-ignore
         await (supabase.from('chat_threads') as any).upsert(
-          { booking_id: booking.id, tourist_id: booking.tourist_id, guide_id: booking.guide_id },
-          { onConflict: 'booking_id', ignoreDuplicates: true }
+          { tourist_id: booking.tourist_id, guide_id: booking.guide_id },
+          { onConflict: 'tourist_id,guide_id', ignoreDuplicates: true }
         );
       }
       
@@ -66,7 +66,11 @@ export default function BookingDetailScreen() {
 
   async function openChat() {
     // @ts-ignore
-    const { data } = await (supabase.from('chat_threads') as any).select('id').eq('booking_id', booking.id).maybeSingle();
+    const { data } = await (supabase.from('chat_threads') as any)
+      .select('id')
+      .eq('tourist_id', booking.tourist_id)
+      .eq('guide_id', booking.guide_id)
+      .maybeSingle();
     if (data) router.push(`/chat/${data.id}` as any);
     else Alert.alert('Chat unavailable', 'Available after the guide accepts.');
   }
@@ -125,6 +129,15 @@ export default function BookingDetailScreen() {
               <Users size={16} color="#8B1A1A" />
               <View className="ml-3"><Text className="font-semibold text-text text-sm">Travelers</Text><Text className="text-text-secondary text-sm">{booking.travelers_count} person{booking.travelers_count > 1 ? 's' : ''}</Text></View>
             </View>
+            {booking.selected_areas?.length > 0 && (
+              <View className="flex-row items-start">
+                <MapPin size={16} color="#8B1A1A" />
+                <View className="ml-3">
+                  <Text className="font-semibold text-text text-sm">Areas</Text>
+                  <Text className="text-text-secondary text-sm">{booking.selected_areas.join(', ')}</Text>
+                </View>
+              </View>
+            )}
             {booking.special_notes && (
               <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-1">
                 <Text className="font-semibold text-amber-800 text-xs mb-1">Special Notes</Text>
