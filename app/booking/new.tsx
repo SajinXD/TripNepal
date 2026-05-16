@@ -117,7 +117,7 @@ export default function NewBookingScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1 mr-3">
           <ChevronLeft size={24} color="#0A0A0A" />
         </TouchableOpacity>
-        <Text className="font-display text-xl text-text">Book Guide</Text>
+        <Text className="font-display text-xl text-text">Send Request</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -190,21 +190,6 @@ export default function NewBookingScreen() {
               </View>
             </View>
           )}
-
-          {/* Duration */}
-          <View className="mb-5">
-            <Text className="font-semibold text-sm text-text mb-2">Duration (Days)</Text>
-            <View className="flex-row items-center bg-white border border-border rounded-xl px-4">
-              <Calendar size={18} color="#6B7280" />
-              <TextInput
-                value={days}
-                onChangeText={setDays}
-                keyboardType="numeric"
-                className="flex-1 py-4 ml-3 text-base text-text"
-                maxLength={2}
-              />
-            </View>
-          </View>
 
           {/* Start Date — calendar picker */}
           <View className="mb-5">
@@ -287,46 +272,12 @@ export default function NewBookingScreen() {
             </View>
           </View>
 
-          {/* Price breakdown */}
-          <View className="bg-mint/20 border border-mint rounded-2xl p-5 mb-8">
-            <Text className="font-semibold text-text mb-4">Price Summary</Text>
-
-            {showAreaPicker && selectedAreas.length === 0 ? (
-              <Text className="text-text-secondary text-sm text-center py-2">
-                Select areas above to see pricing
-              </Text>
-            ) : (
-              <>
-                {/* Per-area breakdown */}
-                {selectedAreas.map(area => (
-                  <View key={area} className="flex-row justify-between mb-1">
-                    <Text className="text-text-secondary text-xs">{area}</Text>
-                    <Text className="text-text text-xs">रू {(areaMap[area] ?? 0).toLocaleString()}/day</Text>
-                  </View>
-                ))}
-
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-text-secondary text-sm">रू {baseRatePerDay.toLocaleString()} × {days || 0} days</Text>
-                  <Text className="text-text font-medium text-sm">रू {subtotal.toLocaleString()}</Text>
-                </View>
-                <View className="flex-row justify-between mb-4">
-                  <Text className="text-text-secondary text-sm">Platform fee (5%)</Text>
-                  <Text className="text-text font-medium text-sm">रू {serviceFee.toLocaleString()}</Text>
-                </View>
-                <View className="flex-row justify-between border-t border-mint/50 pt-3">
-                  <Text className="font-bold text-text">Total</Text>
-                  <Text className="font-display text-primary text-xl">रू {total.toLocaleString()}</Text>
-                </View>
-              </>
-            )}
-          </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View className="p-6 bg-white border-t border-border">
         <Button onPress={handleContinue} loading={loading} fullWidth size="lg">
-          Confirm Booking
+          Send Request
         </Button>
       </View>
     </SafeScreen>

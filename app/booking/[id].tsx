@@ -115,10 +115,12 @@ export default function BookingDetailScreen() {
         <View className="bg-white rounded-2xl border border-border p-5 mb-4">
           <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-4">Trip Details</Text>
           <View className="gap-3">
-            <View className="flex-row items-start">
-              <Calendar size={16} color="#8B1A1A" />
-              <View className="ml-3"><Text className="font-semibold text-text text-sm">Dates</Text><Text className="text-text-secondary text-sm">{booking.start_date} → {booking.end_date} · {booking.total_days} days</Text></View>
-            </View>
+            {!isGuide && (
+              <View className="flex-row items-start">
+                <Calendar size={16} color="#8B1A1A" />
+                <View className="ml-3"><Text className="font-semibold text-text text-sm">Dates</Text><Text className="text-text-secondary text-sm">{booking.start_date} → {booking.end_date} · {booking.total_days} days</Text></View>
+              </View>
+            )}
             {booking.pickup_location && (
               <View className="flex-row items-start">
                 <MapPin size={16} color="#8B1A1A" />
@@ -147,19 +149,21 @@ export default function BookingDetailScreen() {
           </View>
         </View>
 
-        {/* Payment */}
-        <View className="bg-white rounded-2xl border border-border p-5 mb-8">
-          <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-4">Payment</Text>
-          <View className="gap-2">
-            <View className="flex-row justify-between"><Text className="text-text-secondary text-sm">Subtotal</Text><Text className="text-text text-sm">रू {booking.subtotal_npr?.toLocaleString() || '—'}</Text></View>
-            <View className="flex-row justify-between"><Text className="text-text-secondary text-sm">Platform Fee (5%)</Text><Text className="text-text text-sm">रू {booking.service_fee_npr?.toLocaleString() || '—'}</Text></View>
-            <View className="flex-row justify-between border-t border-border pt-2 mt-1"><Text className="font-bold text-text">Total</Text><Text className="font-display text-primary text-lg">रू {booking.total_amount_npr?.toLocaleString() || '—'}</Text></View>
-            <View className="flex-row items-center mt-2">
-              <Shield size={13} color="#059669" />
-              <Text className="text-text-secondary text-xs ml-2">Status: <Text className="font-semibold capitalize">{booking.payment_status?.replace('_', ' ') || 'pending'}</Text>{booking.payment_method && ` · ${booking.payment_method}`}</Text>
+        {/* Payment — tourist view only */}
+        {!isGuide && (
+          <View className="bg-white rounded-2xl border border-border p-5 mb-8">
+            <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-4">Payment</Text>
+            <View className="gap-2">
+              <View className="flex-row justify-between"><Text className="text-text-secondary text-sm">Subtotal</Text><Text className="text-text text-sm">रू {booking.subtotal_npr?.toLocaleString() || '—'}</Text></View>
+              <View className="flex-row justify-between"><Text className="text-text-secondary text-sm">Platform Fee (5%)</Text><Text className="text-text text-sm">रू {booking.service_fee_npr?.toLocaleString() || '—'}</Text></View>
+              <View className="flex-row justify-between border-t border-border pt-2 mt-1"><Text className="font-bold text-text">Total</Text><Text className="font-display text-primary text-lg">रू {booking.total_amount_npr?.toLocaleString() || '—'}</Text></View>
+              <View className="flex-row items-center mt-2">
+                <Shield size={13} color="#059669" />
+                <Text className="text-text-secondary text-xs ml-2">Status: <Text className="font-semibold capitalize">{booking.payment_status?.replace('_', ' ') || 'pending'}</Text>{booking.payment_method && ` · ${booking.payment_method}`}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
       </ScrollView>
 
       <View className="px-6 py-5 bg-white border-t border-border gap-3">

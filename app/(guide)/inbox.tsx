@@ -263,25 +263,6 @@ export default function GuideInbox() {
 									className="bg-card rounded-2xl border border-border p-4 shadow-sm mb-3"
 								>
 									<View className="flex-row items-center">
-										<View className="bg-primary/10 rounded-xl p-3 items-center justify-center w-14 h-14 mr-4">
-											<Text className="font-display text-base text-primary">
-												{booking.start_date
-													? new Date(
-															booking.start_date,
-														).getDate()
-													: "—"}
-											</Text>
-											<Text className="text-[9px] font-semibold text-primary uppercase">
-												{booking.start_date
-													? new Date(
-															booking.start_date,
-														).toLocaleString(
-															"default",
-															{ month: "short" },
-														)
-													: ""}
-											</Text>
-										</View>
 										<View className="flex-1">
 											<View className="flex-row items-center mb-1">
 												<View
@@ -304,10 +285,7 @@ export default function GuideInbox() {
 												{touristName}
 											</Text>
 											<Text className="text-xs text-text-secondary mt-0.5">
-												{booking.total_days} days ·{" "}
-												{booking.travelers_count} pax ·
-												रू{" "}
-												{booking.total_amount_npr?.toLocaleString()}
+												{booking.travelers_count} pax
 											</Text>
 										</View>
 										<ChevronRight
@@ -522,13 +500,7 @@ export default function GuideInbox() {
 												"Tourist"}
 										</Text>
 										<Text className="text-xs text-text-secondary mt-0.5">
-											{b.start_date
-												? new Date(
-														b.start_date,
-													).toLocaleDateString()
-												: "No date"}{" "}
-											· {b.total_days} days · रू{" "}
-											{b.total_amount_npr?.toLocaleString()}
+											{b.travelers_count} pax
 										</Text>
 									</View>
 								))

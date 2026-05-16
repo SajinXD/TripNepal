@@ -395,7 +395,7 @@ export default function GuideDetailScreen() {
                 activeOpacity={0.8}
                 onPress={() => router.push(`/booking/new?guideId=${id}` as any)}
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Book Now</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Send Request</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

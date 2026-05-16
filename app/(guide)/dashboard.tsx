@@ -293,17 +293,6 @@ export default function GuideDashboardScreen() {
 											<Text className="font-displaySemiBold text-[15px] text-on-surface">
 												{name}
 											</Text>
-											<View className="flex-row items-center mt-0.5">
-												<CalendarDays
-													size={12}
-													color="#717973"
-												/>
-												<Text className="font-body text-[12px] text-on-surface-variant ml-1">
-													{booking.start_date} →{" "}
-													{booking.end_date} (
-													{booking.total_days} days)
-												</Text>
-											</View>
 										</View>
 										<ChevronRight
 											size={18}
@@ -325,10 +314,6 @@ export default function GuideDashboardScreen() {
 												" ",
 											)}{" "}
 											· {booking.district}
-										</Text>
-										<Text className="font-displaySemiBold text-[15px] text-primary">
-											रू{" "}
-											{booking.total_amount_npr?.toLocaleString()}
 										</Text>
 									</View>
 
