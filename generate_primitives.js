@@ -470,7 +470,6 @@ for (const [name, content] of Object.entries(files)) {
   console.log('Wrote', name);
 }
 
-// Add clsx and tailwind-merge to package.json since we used it
 const { execSync } = require('child_process');
 try {
   execSync('npm install clsx tailwind-merge lucide-react-native', { stdio: 'inherit' });

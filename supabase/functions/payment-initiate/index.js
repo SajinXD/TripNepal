@@ -1,6 +1,4 @@
-// payment-initiate/index.js
-// POST /functions/v1/payment-initiate
-// Creates a pending transaction and returns gateway redirect URL/payload
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";

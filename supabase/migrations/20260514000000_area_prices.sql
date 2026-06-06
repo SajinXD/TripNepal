@@ -1,4 +1,4 @@
--- Add per-area pricing to guide_profiles and selected_areas to bookings
+
 
 ALTER TABLE public.guide_profiles
   ADD COLUMN IF NOT EXISTS area_prices jsonb DEFAULT '{}'::jsonb;

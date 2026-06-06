@@ -1,7 +1,4 @@
--- ============================================================
--- MIGRATION: 20260101000004_seed_destinations.sql
--- Trip Nepal — 8 Seeded Destinations
--- ============================================================
+
 
 INSERT INTO public.destinations (
   id, name, district, province, description, short_desc,
@@ -9,7 +6,6 @@ INSERT INTO public.destinations (
   best_season, avg_visit_hrs, is_active
 ) VALUES
 
--- 1. Pashupatinath Temple, Kathmandu
 (
   'a1b2c3d4-0001-0000-0000-000000000001',
   'Pashupatinath Temple',
@@ -18,12 +14,11 @@ INSERT INTO public.destinations (
   'Sacred Hindu temple & UNESCO World Heritage Site on the Bagmati River.',
   ARRAY['religious', 'cultural']::trip_category[],
   27.7104, 85.3487, 1336,
-  1000,  -- entry fee for foreigners in NPR
+  1000,  
   ARRAY['October', 'November', 'December', 'January', 'February', 'March'],
   3.0, TRUE
 ),
 
--- 2. Boudhanath Stupa, Kathmandu
 (
   'a1b2c3d4-0002-0000-0000-000000000002',
   'Boudhanath Stupa',
@@ -37,7 +32,6 @@ INSERT INTO public.destinations (
   2.5, TRUE
 ),
 
--- 3. Swayambhunath (Monkey Temple), Kathmandu
 (
   'a1b2c3d4-0003-0000-0000-000000000003',
   'Swayambhunath Stupa',
@@ -51,7 +45,6 @@ INSERT INTO public.destinations (
   2.0, TRUE
 ),
 
--- 4. Pokhara & Phewa Lake
 (
   'a1b2c3d4-0004-0000-0000-000000000004',
   'Phewa Lake & Pokhara Lakeside',
@@ -65,7 +58,6 @@ INSERT INTO public.destinations (
   4.0, TRUE
 ),
 
--- 5. Annapurna Base Camp (Trek)
 (
   'a1b2c3d4-0005-0000-0000-000000000005',
   'Annapurna Base Camp',
@@ -74,12 +66,11 @@ INSERT INTO public.destinations (
   'High-altitude base camp trek with stunning Himalayan panoramas.',
   ARRAY['trekking', 'adventure', 'photography', 'wildlife']::trip_category[],
   28.5302, 83.8773, 4130,
-  3000,  -- TIMS + ACAP permit
+  3000,  
   ARRAY['October', 'November', 'December', 'March', 'April', 'May'],
   8.0, TRUE
 ),
 
--- 6. Chitwan National Park
 (
   'a1b2c3d4-0006-0000-0000-000000000006',
   'Chitwan National Park',
@@ -93,7 +84,6 @@ INSERT INTO public.destinations (
   6.0, TRUE
 ),
 
--- 7. Lumbini (Birthplace of Buddha)
 (
   'a1b2c3d4-0007-0000-0000-000000000007',
   'Lumbini — Birthplace of Buddha',
@@ -107,7 +97,6 @@ INSERT INTO public.destinations (
   5.0, TRUE
 ),
 
--- 8. Everest Base Camp (Trek via Lukla)
 (
   'a1b2c3d4-0008-0000-0000-000000000008',
   'Everest Base Camp',
@@ -116,7 +105,7 @@ INSERT INTO public.destinations (
   'World-famous trek to the base of the highest mountain on Earth.',
   ARRAY['trekking', 'adventure', 'photography']::trip_category[],
   27.9946, 86.8527, 5364,
-  7500,  -- Sagarmatha NP permit + TIMS
+  7500,  
   ARRAY['March', 'April', 'May', 'October', 'November'],
   14.0, TRUE
 );

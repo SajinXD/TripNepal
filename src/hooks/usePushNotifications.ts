@@ -60,9 +60,9 @@ export function usePushNotifications() {
       registerForPushNotificationsAsync().then(async (token) => {
         if (token && isMounted) {
           setExpoPushToken(token);
-          // Save token to Supabase
+          
           try {
-            // @ts-ignore
+            
             await (supabase.from('push_tokens') as any).upsert(
               { user_id: user.id, token, device_type: Platform.OS },
               { onConflict: 'user_id,token' }

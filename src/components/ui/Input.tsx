@@ -1,7 +1,7 @@
 import React, { useState, ReactNode } from 'react';
 import { TextInput, TextInputProps, View, Text, Pressable } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { cn } from './Button'; // Assuming we put cn there or in a utils file
+import { cn } from './Button'; 
 
 export interface InputProps extends TextInputProps {
   label?: string;

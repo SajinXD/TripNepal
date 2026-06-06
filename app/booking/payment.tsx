@@ -33,10 +33,10 @@ export default function PaymentScreen() {
     setLoading(true);
 
     try {
-      // Simulate payment gateway call, then update booking + create transaction
-      await new Promise(r => setTimeout(r, 1800)); // Simulate gateway delay
+      
+      await new Promise(r => setTimeout(r, 1800)); 
 
-      // @ts-ignore - Supabase type inference for bookings/transactions results in never
+      
       const { error: bError } = await (supabase
         .from('bookings') as any)
         .update({
@@ -48,7 +48,7 @@ export default function PaymentScreen() {
 
       if (bError) throw bError;
 
-      // @ts-ignore
+      
       const { error: tError } = await (supabase
         .from('transactions') as any)
         .insert({
@@ -85,7 +85,7 @@ export default function PaymentScreen() {
       </View>
 
       <View className="flex-1 px-6 pt-6">
-        {/* Amount Card */}
+        {}
         <View className="bg-primary rounded-2xl p-6 mb-8 items-center shadow-sm">
           <Text className="text-mint/80 font-semibold uppercase tracking-wider text-xs mb-1">Total to Pay</Text>
           <Text className="font-display text-white text-4xl">रू {amount.toLocaleString()}</Text>

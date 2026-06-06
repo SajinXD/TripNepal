@@ -17,7 +17,7 @@ export default function ConverterScreen() {
   const [rateUpdated, setRateUpdated] = useState<string | null>(null);
   const [loadingRate, setLoadingRate] = useState(true);
   const [amount, setAmount] = useState('100');
-  const [isNprToUsd, setIsNprToUsd] = useState(false); // false = USD → NPR
+  const [isNprToUsd, setIsNprToUsd] = useState(false); 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function ConverterScreen() {
         setRateUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       }
     } catch {
-      setRate(133.45); // fallback
+      setRate(133.45); 
     }
     setLoadingRate(false);
   }
@@ -56,7 +56,7 @@ export default function ConverterScreen() {
 
   function handleSwap() {
     if (!rate) return;
-    // Push current conversion to history before swapping
+    
     const converted = getConverted();
     if (converted && amount !== '0' && amount !== '') {
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -94,7 +94,7 @@ export default function ConverterScreen() {
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }} showsVerticalScrollIndicator={false}>
 
-        {/* Rate card */}
+        {}
         <Card className="mb-5">
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#717973', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -116,9 +116,9 @@ export default function ConverterScreen() {
           )}
         </Card>
 
-        {/* Converter */}
+        {}
         <View style={{ marginBottom: 24 }}>
-          {/* Top (input) */}
+          {}
           <Card className="border border-primary mb-2 p-5" noPadding>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: '#8B1A1A', textTransform: 'uppercase', letterSpacing: 0.5 }}>{topLabel}</Text>
@@ -132,7 +132,7 @@ export default function ConverterScreen() {
             </View>
           </Card>
 
-          {/* Swap button */}
+          {}
           <View style={{ alignItems: 'center', zIndex: 10, marginVertical: -2 }}>
             <Pressable
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#8B1A1A', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#F8F9FA' }}
@@ -142,7 +142,7 @@ export default function ConverterScreen() {
             </Pressable>
           </View>
 
-          {/* Bottom (output) */}
+          {}
           <Card className="bg-surface-container-low mb-2 p-5" noPadding>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: '#717973', textTransform: 'uppercase', letterSpacing: 0.5 }}>{bottomLabel}</Text>
@@ -157,7 +157,7 @@ export default function ConverterScreen() {
           </Card>
         </View>
 
-        {/* Keypad */}
+        {}
         <View style={{ marginBottom: 24 }}>
           {[['1','2','3'],['4','5','6'],['7','8','9'],['.','0','back']].map((row, i) => (
             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -192,7 +192,7 @@ export default function ConverterScreen() {
           ))}
         </View>
 
-        {/* History */}
+        {}
         <View style={{ marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: '#1A1C1E' }}>Recent History</Text>
@@ -227,7 +227,7 @@ export default function ConverterScreen() {
           )}
         </View>
 
-        {/* Tipping guide */}
+        {}
         <Card className="bg-tertiary-container mb-12 p-5 relative overflow-hidden">
           <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 6 }}>Tipping Guide 🙏</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 20 }}>

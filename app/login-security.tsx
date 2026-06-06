@@ -45,7 +45,7 @@ export default function LoginSecurityScreen() {
 
     setLoading(true);
     try {
-      // Verify current password by re-authenticating
+      
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user?.email ?? '',
         password: currentPassword,
@@ -55,7 +55,7 @@ export default function LoginSecurityScreen() {
         return;
       }
 
-      // Update to new password
+      
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
         Alert.alert('Error', error.message || 'Failed to update password.');
@@ -98,7 +98,7 @@ export default function LoginSecurityScreen() {
       className="flex-1 bg-surface"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header */}
+      {}
       <View style={{ paddingTop: insets.top + 8 }} className="px-5 pb-4 border-b border-outline-variant flex-row items-center">
         <Pressable onPress={() => router.back()} className="mr-3 p-1">
           <ArrowLeft size={24} color="#8B1A1A" />
@@ -108,7 +108,7 @@ export default function LoginSecurityScreen() {
 
       <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
 
-        {/* Change Password Section */}
+        {}
         <Text className="font-bodyBold text-[12px] text-on-surface-variant uppercase tracking-wider mb-4">
           CHANGE PASSWORD
         </Text>
@@ -145,7 +145,7 @@ export default function LoginSecurityScreen() {
             />
           </View>
 
-          {/* Password strength hint */}
+          {}
           {newPassword.length > 0 && (
             <View className="mb-4">
               <Text className="font-body text-[12px] text-on-surface-variant mb-1">Password strength:</Text>
@@ -178,7 +178,7 @@ export default function LoginSecurityScreen() {
           </Button>
         </View>
 
-        {/* Security Info */}
+        {}
         <Text className="font-bodyBold text-[12px] text-on-surface-variant uppercase tracking-wider mb-4">
           SECURITY INFO
         </Text>
@@ -198,7 +198,7 @@ export default function LoginSecurityScreen() {
           </View>
         </View>
 
-        {/* Danger Zone */}
+        {}
         <Text className="font-bodyBold text-[12px] text-error uppercase tracking-wider mb-4">
           DANGER ZONE
         </Text>

@@ -121,13 +121,13 @@ export default function StayDetailScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      {/* Hero */}
+      {}
       <View className="w-full h-[300px] relative">
         <ImageBackground source={{ uri: lodge.image_url }} className="w-full h-full">
           <LinearGradient colors={['rgba(0,0,0,0.3)', 'transparent', 'transparent']} className="w-full h-full" />
         </ImageBackground>
 
-        {/* Back & Wishlist buttons */}
+        {}
         <Pressable
           onPress={() => router.back()}
           className="absolute top-12 left-5 w-10 h-10 bg-white/90 rounded-full items-center justify-center"
@@ -145,7 +145,7 @@ export default function StayDetailScreen() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-6 pt-5 pb-4">
-          {/* Title row */}
+          {}
           <View className="flex-row justify-between items-start mb-2">
             <Text className="font-display text-2xl text-text flex-1 mr-2">{lodge.name}</Text>
             <View className="items-end">
@@ -154,7 +154,7 @@ export default function StayDetailScreen() {
             </View>
           </View>
 
-          {/* Location + Rating */}
+          {}
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
               <MapPin size={14} color="#6B7280" />
@@ -167,7 +167,7 @@ export default function StayDetailScreen() {
             </View>
           </View>
 
-          {/* Quick Stats */}
+          {}
           <View className="flex-row bg-surface/60 rounded-xl p-4 mb-5 border border-border">
             <View className="flex-1 items-center">
               <Users size={18} color="#8B1A1A" />
@@ -188,11 +188,11 @@ export default function StayDetailScreen() {
             </View>
           </View>
 
-          {/* Description */}
+          {}
           <Text className="font-semibold text-text text-base mb-2">About this stay</Text>
           <Text className="font-sans text-text-secondary text-sm leading-relaxed mb-5">{lodge.description}</Text>
 
-          {/* Amenities */}
+          {}
           <Text className="font-semibold text-text text-base mb-3">What's included</Text>
           <View className="flex-row flex-wrap mb-6">
             {lodge.amenities.map((a: string) => {

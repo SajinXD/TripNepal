@@ -1,4 +1,4 @@
-// src/components/layout/SafeScreen.tsx
+
 import { ReactNode } from 'react';
 import { ScrollView, ScrollViewProps, View, ViewProps, StyleSheet } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';

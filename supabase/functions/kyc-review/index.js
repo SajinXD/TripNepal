@@ -1,6 +1,4 @@
-// kyc-review/index.js
-// POST /functions/v1/kyc-review  [ADMIN ONLY]
-// Approves or rejects a guide's KYC submission
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";

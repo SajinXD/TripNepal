@@ -41,7 +41,7 @@ export default function SignupScreen() {
     }
 
     if (data.user) {
-      // Explicitly set profile fields — trigger may not have run yet
+      
       await (supabase.from('profiles') as any)
         .update({ full_name: fullName.trim(), role, ...(phone ? { phone: phone.trim() } : {}) })
         .eq('id', data.user.id);
@@ -49,7 +49,7 @@ export default function SignupScreen() {
 
     setLoading(false);
 
-    // If session is null, Supabase requires email confirmation before login
+    
     if (!data.session) {
       Alert.alert(
         'Check your email',

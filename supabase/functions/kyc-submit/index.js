@@ -1,6 +1,4 @@
-// kyc-submit/index.js
-// POST /functions/v1/kyc-submit
-// Guide submits KYC documents for verification
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";
@@ -116,7 +114,7 @@ Deno.serve(async (req) => {
     kycId = inserted.id;
   }
 
-  // Notify all admins
+  
   const { data: admins } = await admin
     .from("profiles")
     .select("id")

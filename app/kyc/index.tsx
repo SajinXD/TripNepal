@@ -39,7 +39,7 @@ export default function KYCWizard() {
 	const [step, setStep] = useState(1);
 	const [loading, setLoading] = useState(false);
 
-	// Step 1 — Personal details
+	
 	const [fullNameLegal, setFullNameLegal] = useState("");
 	const [citizenshipNumber, setCitizenshipNumber] = useState("");
 	const [phone, setPhone] = useState("");
@@ -48,7 +48,7 @@ export default function KYCWizard() {
 	const [permanentAddress, setPermanentAddress] = useState("");
 	const [yearsExperience, setYearsExperience] = useState("");
 
-	// Step 2 — Documents (citizenship only; NTB license is in Guide Settings)
+	
 	const [citizenshipPath, setCitizenshipPath] = useState<string | null>(null);
 	const [uploadingDoc, setUploadingDoc] = useState(false);
 
@@ -63,7 +63,7 @@ export default function KYCWizard() {
 		setUploadingDoc(false);
 	}
 
-	// Step 3 — Service setup
+	
 	const [areaPrices, setAreaPrices] = useState<Record<string, string>>({});
 	const [languages, setLanguages] = useState("English, Nepali");
 	const [bio, setBio] = useState("");
@@ -86,7 +86,7 @@ export default function KYCWizard() {
 	];
 
 	const SERVICE_AREAS = [
-		// Core cities & valleys
+		
 		"Kathmandu",
 		"Pokhara",
 		"Chitwan",
@@ -95,7 +95,7 @@ export default function KYCWizard() {
 		"Nagarkot",
 		"Dhulikhel",
 		"Bandipur",
-		// Trekking regions
+		
 		"Solukhumbu (Everest)",
 		"Kaski (Annapurna)",
 		"Mustang",
@@ -107,11 +107,11 @@ export default function KYCWizard() {
 		"Jomsom",
 		"Rolwaling",
 		"Rara Lake",
-		// Wildlife & plains
+		
 		"Bardiya",
 		"Ilam",
 		"Lumbini",
-		// Other towns
+		
 		"Gorkha",
 		"Tansen (Palpa)",
 		"Dharan",
@@ -284,7 +284,7 @@ export default function KYCWizard() {
 
 	return (
 		<SafeScreen edges={["top", "bottom"]} bg="#F7F7F4">
-			{/* Header */}
+			{}
 			<View className="px-6 py-4 flex-row items-center justify-between bg-white border-b border-border">
 				<TouchableOpacity
 					onPress={() =>
@@ -302,7 +302,7 @@ export default function KYCWizard() {
 				</Text>
 			</View>
 
-			{/* Step indicator */}
+			{}
 			<View className="flex-row px-6 py-4 bg-white border-b border-border">
 				{STEPS.map((s, i) => {
 					const Icon = s.icon;
@@ -347,7 +347,7 @@ export default function KYCWizard() {
 					showsVerticalScrollIndicator={false}
 					keyboardShouldPersistTaps="handled"
 				>
-					{/* ── STEP 1: Personal Details ── */}
+					{}
 					{step === 1 && (
 						<View>
 							<Text className="font-display text-2xl text-text mb-1">
@@ -457,7 +457,7 @@ export default function KYCWizard() {
 						</View>
 					)}
 
-					{/* ── STEP 2: Upload Documents ── */}
+					{}
 					{step === 2 && (
 						<View>
 							<Text className="font-display text-2xl text-text mb-1">
@@ -514,7 +514,7 @@ export default function KYCWizard() {
 						</View>
 					)}
 
-					{/* ── STEP 3: Service Setup ── */}
+					{}
 					{step === 3 && (
 						<View>
 							<Text className="font-display text-2xl text-text mb-1">
@@ -525,7 +525,7 @@ export default function KYCWizard() {
 								up your guide profile.
 							</Text>
 
-							{/* Specializations */}
+							{}
 							<Text className="font-semibold text-sm text-text mb-3">
 								Your Specializations *{" "}
 								<Text className="text-text-muted font-normal">
@@ -554,7 +554,7 @@ export default function KYCWizard() {
 								})}
 							</View>
 
-							{/* Service Areas */}
+							{}
 							<Text className="font-semibold text-sm text-text mb-3">
 								Areas You Serve *{" "}
 								<Text className="text-text-muted font-normal">
@@ -580,7 +580,7 @@ export default function KYCWizard() {
 								})}
 							</View>
 
-							{/* Per-area price inputs */}
+							{}
 							{selectedAreas.length > 0 && (
 								<View className="mb-5">
 									<Text className="font-semibold text-sm text-text mb-3">

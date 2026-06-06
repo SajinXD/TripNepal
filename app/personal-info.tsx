@@ -31,7 +31,7 @@ export default function PersonalInformationScreen() {
 
   const loadProfile = async () => {
     setLoadingData(true);
-    // @ts-ignore - The Supabase generated Database types for 'profiles' are failing to infer the Select and Update types properly, resulting in 'never'
+    
     const { data } = await (supabase.from('profiles') as any)
       .select('full_name, phone, country, bio, gender')
       .eq('id', user!.id)
@@ -54,7 +54,7 @@ export default function PersonalInformationScreen() {
     }
     setLoading(true);
     
-    // @ts-ignore - The Supabase generated Database types for 'profiles' are failing to infer the Update type properly, resulting in 'never'
+    
     const { error } = await (supabase.from('profiles') as any)
       .update({
         full_name: fullName.trim(),
@@ -70,7 +70,7 @@ export default function PersonalInformationScreen() {
     if (error) {
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } else {
-      // Update auth store with new name
+      
       if (profile) {
         setAuth(user, { ...profile, full_name: fullName.trim() });
       }
@@ -98,7 +98,7 @@ export default function PersonalInformationScreen() {
       className="flex-1 bg-surface"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header */}
+      {}
       <View style={{ paddingTop: insets.top + 8 }} className="px-5 pb-4 border-b border-outline-variant flex-row items-center">
         <Pressable onPress={() => router.back()} className="mr-3 p-1">
           <ArrowLeft size={24} color="#8B1A1A" />
@@ -107,7 +107,7 @@ export default function PersonalInformationScreen() {
       </View>
 
       <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
-        {/* Full Name */}
+        {}
         <View className="mb-5">
           <Input
             label="Full Name"
@@ -119,7 +119,7 @@ export default function PersonalInformationScreen() {
           />
         </View>
 
-        {/* Email - read only */}
+        {}
         <View className="mb-5">
           <Text className="font-semibold text-[14px] text-on-surface mb-2 font-bodySemibold">Email</Text>
           <View className="flex-row items-center bg-surface-container border border-surface-container-highest rounded-[8px] px-3 h-12">
@@ -128,7 +128,7 @@ export default function PersonalInformationScreen() {
           </View>
         </View>
 
-        {/* Phone */}
+        {}
         <View className="mb-5">
           <Input
             label="Phone Number"
@@ -140,7 +140,7 @@ export default function PersonalInformationScreen() {
           />
         </View>
 
-        {/* Country */}
+        {}
         <View className="mb-5">
           <Input
             label="Country"
@@ -152,7 +152,7 @@ export default function PersonalInformationScreen() {
           />
         </View>
 
-        {/* Gender */}
+        {}
         <View className="mb-5">
           <Text className="font-semibold text-[14px] text-on-surface mb-2 font-bodySemibold">Gender</Text>
           <View className="flex-row flex-wrap gap-2">
@@ -174,7 +174,7 @@ export default function PersonalInformationScreen() {
           </View>
         </View>
 
-        {/* Bio */}
+        {}
         <View className="mb-8">
           <Text className="font-semibold text-[14px] text-on-surface mb-2 font-bodySemibold">Bio</Text>
           <View className="bg-surface-container-low border border-surface-container-highest rounded-[8px] px-3 py-3">

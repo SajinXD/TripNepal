@@ -46,7 +46,6 @@ When a user asks about a trip, always provide:
 4. Best time to visit
 Keep answers practical and friendly.`;
 
-// Simple markdown renderer for React Native
 function renderMarkdown(text: string) {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
@@ -60,7 +59,7 @@ function renderMarkdown(text: string) {
       continue;
     }
 
-    // Heading (## or #)
+    
     if (line.startsWith('## ') || line.startsWith('# ')) {
       const txt = line.replace(/^#+\s*/, '');
       elements.push(
@@ -71,7 +70,7 @@ function renderMarkdown(text: string) {
       continue;
     }
 
-    // Numbered list
+    
     const numberedMatch = line.match(/^(\d+)\.\s+(.*)/);
     if (numberedMatch) {
       elements.push(
@@ -83,7 +82,7 @@ function renderMarkdown(text: string) {
       continue;
     }
 
-    // Bullet point
+    
     if (line.startsWith('- ') || line.startsWith('• ')) {
       const txt = line.replace(/^[-•]\s+/, '');
       elements.push(
@@ -95,7 +94,7 @@ function renderMarkdown(text: string) {
       continue;
     }
 
-    // Regular paragraph
+    
     elements.push(
       <Text key={key++} style={{ fontSize: 15, color: '#1A1C1E', lineHeight: 23, marginBottom: 2 }}>
         {renderInline(line)}
@@ -195,7 +194,7 @@ export default function AiPlanScreen() {
         const guides = guideResult.data || [];
         setAppContext(buildAppContext(destinations, guides));
       } catch {
-        // silently fail — base prompt still works
+        
       }
     }
     fetchAppData();
@@ -274,7 +273,7 @@ export default function AiPlanScreen() {
         <ScreenHeader />
       </View>
 
-      {/* Header bar */}
+      {}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: 4, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#fff' }}>
         <View style={{ width: 36, height: 36, backgroundColor: '#C8E6C9', borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
           <Bot size={20} color="#8B1A1A" />
@@ -299,7 +298,7 @@ export default function AiPlanScreen() {
         showsVerticalScrollIndicator={false}
         onContentSizeChange={scrollToBottom}
       >
-        {/* Quick suggestion grid — shown only before first user message */}
+        {}
         {isFirstMessage && (
           <View style={{ marginBottom: 24 }}>
             <Text style={{ fontSize: 13, color: '#717973', marginBottom: 12, textAlign: 'center', fontWeight: '600', letterSpacing: 0.5 }}>
@@ -327,7 +326,7 @@ export default function AiPlanScreen() {
           </View>
         )}
 
-        {/* Messages */}
+        {}
         {messages.map((msg, idx) => (
           <View
             key={msg.id}
@@ -355,7 +354,7 @@ export default function AiPlanScreen() {
           </View>
         ))}
 
-        {/* Typing indicator */}
+        {}
         {loading && (
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginBottom: 16, paddingRight: 40 }}>
             <View style={{ width: 30, height: 30, backgroundColor: '#C8E6C9', borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
@@ -368,7 +367,7 @@ export default function AiPlanScreen() {
           </View>
         )}
 
-        {/* Follow-up chips — shown after last AI message */}
+        {}
         {showFollowUps && !loading && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 8, marginLeft: 38, fontWeight: '600' }}>QUICK FOLLOW-UPS</Text>
@@ -389,7 +388,7 @@ export default function AiPlanScreen() {
         <View style={{ height: 16 }} />
       </ScrollView>
 
-      {/* Input bar */}
+      {}
       <View style={{ paddingHorizontal: 16, paddingVertical: 10, paddingBottom: insets.bottom + 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', backgroundColor: '#F3F4F6', borderRadius: 24, paddingHorizontal: 12, paddingVertical: 8, minHeight: 50 }}>
           <TextInput

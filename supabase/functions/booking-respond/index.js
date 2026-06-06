@@ -1,6 +1,4 @@
-// booking-respond/index.js
-// POST /functions/v1/booking-respond
-// Guide accepts or rejects a pending booking
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";

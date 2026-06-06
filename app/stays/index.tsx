@@ -73,7 +73,7 @@ export default function StaysScreen() {
   const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
 
-  // Load persisted wishlist on mount
+  
   useEffect(() => {
     AsyncStorage.getItem(WISHLIST_KEY).then(saved => {
       if (saved) setWishlist(new Set(JSON.parse(saved)));
@@ -90,7 +90,7 @@ export default function StaysScreen() {
     });
   }
 
-  // Sort: bookmarked first, then filter
+  
   const filtered = useMemo(() => {
     const sorted = [...STATIC_LODGES].sort(
       (a, b) => (wishlist.has(b.id) ? 1 : 0) - (wishlist.has(a.id) ? 1 : 0)
@@ -115,7 +115,7 @@ export default function StaysScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => setRefreshing(false)} tintColor="#8B1A1A" />}
       >
-        {/* Search */}
+        {}
         <View className="px-5 pt-5">
           <View className="bg-white dark:bg-gray-800 h-12 border border-outline-variant dark:border-gray-700 rounded-[8px] flex-row items-center px-4 mb-4">
             <Search size={20} color="#717973" />
@@ -129,7 +129,7 @@ export default function StaysScreen() {
           </View>
         </View>
 
-        {/* Filters */}
+        {}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 px-5">
           {FILTERS.map(f => (
             <TouchableOpacity key={f} activeOpacity={0.7} onPress={() => setActiveFilter(f)} className="mr-2">
@@ -138,7 +138,7 @@ export default function StaysScreen() {
           ))}
         </ScrollView>
 
-        {/* Featured Hero */}
+        {}
         {featured && activeFilter === 'All' && !search && (
           <TouchableOpacity
             activeOpacity={0.9}
@@ -164,7 +164,7 @@ export default function StaysScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Rental Insight */}
+        {}
         {activeFilter === 'All' && !search && (
           <Card className="bg-primary mx-5 mb-5 p-5">
             <Text className="font-displaySemiBold text-[16px] text-mint mb-1">Rental Insight</Text>
@@ -174,7 +174,7 @@ export default function StaysScreen() {
           </Card>
         )}
 
-        {/* Listings */}
+        {}
         <View className="px-5">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="font-displaySemiBold text-[20px] text-on-surface dark:text-white">
@@ -190,7 +190,7 @@ export default function StaysScreen() {
               onPress={() => router.push(`/stays/${lodge.id}` as any)}
             >
               <Card noPadding className="mb-5 p-4">
-                {/* Image */}
+                {}
                 <View className="relative mb-3">
                   <ImageBackground
                     source={{ uri: lodge.image_url }}
@@ -227,7 +227,7 @@ export default function StaysScreen() {
                   )}
                 </View>
 
-                {/* Info */}
+                {}
                 <View className="flex-row justify-between items-start mb-1">
                   <View className="flex-1 mr-3">
                     <Text className="font-displaySemiBold text-[16px] text-on-surface" numberOfLines={1}>{lodge.name}</Text>
@@ -242,7 +242,7 @@ export default function StaysScreen() {
                   </View>
                 </View>
 
-                {/* Amenities */}
+                {}
                 <View className="flex-row items-center mb-4 border-t border-outline-variant pt-3 mt-1">
                   {lodge.amenities.includes('wifi') && (
                     <View className="flex-row items-center mr-3">

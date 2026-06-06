@@ -1,19 +1,7 @@
--- ============================================================================
--- Trip Nepal — Complete Database Setup
--- Paste the entire file into the Supabase SQL Editor and run once.
--- Safe to re-run on a FRESH database (drops everything first).
--- ============================================================================
 
--- ============================================================================
--- SECTION 0: CLEANUP — drop all existing objects
--- Note: Drop tables CASCADE first — this automatically removes all their
--- triggers and indexes. Only the auth.users trigger needs explicit drop.
--- ============================================================================
 
--- This trigger lives on auth.users (which we never drop), so drop it explicitly.
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
--- Drop tables in reverse dependency order (CASCADE removes triggers + indexes).
 DROP TABLE IF EXISTS public.push_tokens         CASCADE;
 DROP TABLE IF EXISTS public.notifications       CASCADE;
 DROP TABLE IF EXISTS public.payouts             CASCADE;
@@ -32,7 +20,6 @@ DROP TABLE IF EXISTS public.kyc_verifications   CASCADE;
 DROP TABLE IF EXISTS public.guide_profiles      CASCADE;
 DROP TABLE IF EXISTS public.profiles            CASCADE;
 
--- Drop functions after tables (no dependent triggers remain).
 DROP FUNCTION IF EXISTS public.handle_new_user()         CASCADE;
 DROP FUNCTION IF EXISTS public.set_updated_at()          CASCADE;
 DROP FUNCTION IF EXISTS public.update_guide_rating()     CASCADE;
@@ -55,16 +42,8 @@ DROP TYPE IF EXISTS public.payment_status  CASCADE;
 DROP TYPE IF EXISTS public.trip_category   CASCADE;
 DROP TYPE IF EXISTS public.document_type   CASCADE;
 
--- ============================================================================
--- SECTION 1: EXTENSIONS
--- ============================================================================
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
--- ============================================================================
--- SECTION 2: ENUMS
--- ============================================================================
 
 CREATE TYPE public.user_role      AS ENUM ('tourist', 'guide', 'admin');
 CREATE TYPE public.kyc_status     AS ENUM ('not_submitted', 'pending', 'approved', 'rejected', 'resubmit');
@@ -72,10 +51,6 @@ CREATE TYPE public.booking_status AS ENUM ('requested', 'accepted', 'rejected', 
 CREATE TYPE public.payment_status AS ENUM ('pending', 'held', 'released', 'refunded', 'failed');
 CREATE TYPE public.trip_category  AS ENUM ('trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing', 'food', 'photography', 'local', 'other');
 CREATE TYPE public.document_type  AS ENUM ('citizenship', 'passport', 'driving_license', 'guide_license', 'selfie');
-
--- ============================================================================
--- SECTION 3: HELPER FUNCTIONS (needed before triggers)
--- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -94,11 +69,6 @@ BEGIN
 END;
 $$;
 
--- ============================================================================
--- SECTION 4: TABLES
--- ============================================================================
-
--- PROFILES
 CREATE TABLE public.profiles (
   id                 uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role               public.user_role NOT NULL DEFAULT 'tourist',
@@ -118,7 +88,6 @@ CREATE TABLE public.profiles (
 CREATE INDEX idx_profiles_role  ON public.profiles(role);
 CREATE INDEX idx_profiles_phone ON public.profiles(phone);
 
--- KYC VERIFICATIONS
 CREATE TABLE public.kyc_verifications (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id             uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -141,7 +110,6 @@ CREATE TABLE public.kyc_verifications (
 CREATE INDEX idx_kyc_status ON public.kyc_verifications(status);
 CREATE INDEX idx_kyc_user   ON public.kyc_verifications(user_id);
 
--- KYC DOCUMENTS
 CREATE TABLE public.kyc_documents (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   kyc_id          uuid NOT NULL REFERENCES public.kyc_verifications(id) ON DELETE CASCADE,
@@ -153,7 +121,6 @@ CREATE TABLE public.kyc_documents (
 );
 CREATE INDEX idx_kyc_docs_kyc ON public.kyc_documents(kyc_id);
 
--- GUIDE PROFILES
 CREATE TABLE public.guide_profiles (
   id                      uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   years_of_experience     int DEFAULT 0,
@@ -192,7 +159,6 @@ CREATE INDEX idx_guide_areas     ON public.guide_profiles USING gin(service_area
 CREATE INDEX idx_guide_languages ON public.guide_profiles USING gin(languages_spoken);
 CREATE INDEX idx_guide_location  ON public.guide_profiles(current_lat, current_lng);
 
--- LICENSE VERIFICATIONS
 CREATE TABLE public.license_verifications (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   guide_id         uuid NOT NULL REFERENCES public.guide_profiles(id) ON DELETE CASCADE,
@@ -210,7 +176,6 @@ CREATE TABLE public.license_verifications (
 );
 CREATE INDEX idx_license_guide ON public.license_verifications(guide_id);
 
--- DESTINATIONS
 CREATE TABLE public.destinations (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name                    text NOT NULL,
@@ -244,7 +209,6 @@ CREATE INDEX idx_dest_tags     ON public.destinations USING gin(tags);
 CREATE INDEX idx_dest_search   ON public.destinations USING gin(name gin_trgm_ops);
 CREATE INDEX idx_dest_location ON public.destinations(latitude, longitude);
 
--- SAVED DESTINATIONS
 CREATE TABLE public.saved_destinations (
   user_id        uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
   destination_id uuid REFERENCES public.destinations(id) ON DELETE CASCADE,
@@ -252,7 +216,6 @@ CREATE TABLE public.saved_destinations (
   PRIMARY KEY (user_id, destination_id)
 );
 
--- TRIP PLANS
 CREATE TABLE public.trip_plans (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                 uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -279,7 +242,6 @@ CREATE TABLE public.trip_plans (
 CREATE INDEX idx_trip_plans_user  ON public.trip_plans(user_id);
 CREATE INDEX idx_trip_plans_share ON public.trip_plans(share_token) WHERE share_token IS NOT NULL;
 
--- BOOKINGS
 CREATE TABLE public.bookings (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tourist_id           uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -324,7 +286,6 @@ CREATE INDEX idx_bookings_guide   ON public.bookings(guide_id);
 CREATE INDEX idx_bookings_status  ON public.bookings(status);
 CREATE INDEX idx_bookings_dates   ON public.bookings(start_date, end_date);
 
--- REVIEWS
 CREATE TABLE public.reviews (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id          uuid NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
@@ -344,7 +305,6 @@ CREATE TABLE public.reviews (
 CREATE INDEX idx_reviews_reviewee ON public.reviews(reviewee_id);
 CREATE INDEX idx_reviews_booking  ON public.reviews(booking_id);
 
--- CHAT REQUESTS
 CREATE TABLE public.chat_requests (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tourist_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -356,7 +316,6 @@ CREATE TABLE public.chat_requests (
   UNIQUE(tourist_id, guide_id)
 );
 
--- CHAT THREADS
 CREATE TABLE public.chat_threads (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id      uuid REFERENCES public.bookings(id) ON DELETE SET NULL,
@@ -373,7 +332,6 @@ CREATE TABLE public.chat_threads (
 CREATE INDEX idx_chat_threads_tourist ON public.chat_threads(tourist_id);
 CREATE INDEX idx_chat_threads_guide   ON public.chat_threads(guide_id);
 
--- CHAT MESSAGES
 CREATE TABLE public.chat_messages (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   thread_id      uuid NOT NULL REFERENCES public.chat_threads(id) ON DELETE CASCADE,
@@ -386,7 +344,6 @@ CREATE TABLE public.chat_messages (
 );
 CREATE INDEX idx_chat_messages_thread ON public.chat_messages(thread_id, created_at DESC);
 
--- TRANSACTIONS
 CREATE TABLE public.transactions (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id            uuid REFERENCES public.bookings(id) ON DELETE SET NULL,
@@ -404,7 +361,6 @@ CREATE TABLE public.transactions (
 CREATE INDEX idx_txn_booking ON public.transactions(booking_id);
 CREATE INDEX idx_txn_user    ON public.transactions(user_id);
 
--- PAYOUTS
 CREATE TABLE public.payouts (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   guide_id       uuid NOT NULL REFERENCES public.guide_profiles(id) ON DELETE RESTRICT,
@@ -415,7 +371,6 @@ CREATE TABLE public.payouts (
   updated_at     timestamptz DEFAULT now()
 );
 
--- NOTIFICATIONS
 CREATE TABLE public.notifications (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -429,7 +384,6 @@ CREATE TABLE public.notifications (
 CREATE INDEX idx_notif_user   ON public.notifications(user_id, created_at DESC);
 CREATE INDEX idx_notif_unread ON public.notifications(user_id) WHERE is_read = false;
 
--- PUSH TOKENS
 CREATE TABLE public.push_tokens (
   user_id     uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
   token       text NOT NULL,
@@ -438,11 +392,6 @@ CREATE TABLE public.push_tokens (
   PRIMARY KEY (user_id, token)
 );
 
--- ============================================================================
--- SECTION 5: TRIGGERS
--- ============================================================================
-
--- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -470,7 +419,6 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- updated_at triggers
 CREATE TRIGGER trg_profiles_updated_at
   BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER trg_guide_profiles_updated_at
@@ -490,7 +438,6 @@ CREATE TRIGGER trg_chat_threads_updated_at
 CREATE TRIGGER set_chat_requests_updated_at
   BEFORE UPDATE ON public.chat_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- Recalculate guide rating after a review
 CREATE OR REPLACE FUNCTION public.update_guide_rating()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -514,7 +461,6 @@ CREATE TRIGGER trg_update_guide_rating
   WHEN (NEW.is_guide_review = TRUE)
   EXECUTE FUNCTION public.update_guide_rating();
 
--- Increment total_trips_completed when booking completes
 CREATE OR REPLACE FUNCTION public.handle_booking_completed()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -531,7 +477,6 @@ CREATE TRIGGER trg_booking_completed
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION public.handle_booking_completed();
 
--- Sync license_verifications.status → guide_profiles.ntb_license_status
 CREATE OR REPLACE FUNCTION public.sync_license_status()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -546,7 +491,6 @@ CREATE TRIGGER trg_sync_license_status
   AFTER INSERT OR UPDATE OF status ON public.license_verifications
   FOR EACH ROW EXECUTE FUNCTION public.sync_license_status();
 
--- Update chat thread on new message
 CREATE OR REPLACE FUNCTION public.update_chat_thread_on_message()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE v_thread public.chat_threads%ROWTYPE;
@@ -569,7 +513,6 @@ CREATE TRIGGER trg_chat_message_inserted
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW EXECUTE FUNCTION public.update_chat_thread_on_message();
 
--- Atomic find-or-create for chat threads (avoids upsert returning null on no-op)
 CREATE OR REPLACE FUNCTION public.find_or_create_chat_thread(
   p_tourist_id uuid,
   p_guide_id   uuid
@@ -589,10 +532,6 @@ BEGIN
 END;
 $$;
 
--- ============================================================================
--- SECTION 6: ROW LEVEL SECURITY
--- ============================================================================
-
 ALTER TABLE public.profiles          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_verifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_documents          ENABLE ROW LEVEL SECURITY;
@@ -611,72 +550,59 @@ ALTER TABLE public.payouts           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_tokens       ENABLE ROW LEVEL SECURITY;
 
--- PROFILES
 CREATE POLICY "profiles_read_all"    ON public.profiles FOR SELECT TO authenticated USING (TRUE);
 CREATE POLICY "profiles_insert_own"  ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "profiles_update_own"  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 CREATE POLICY "profiles_admin_all"   ON public.profiles FOR ALL    TO authenticated USING (public.is_admin());
 
--- KYC VERIFICATIONS
 CREATE POLICY "kyc_select_own"       ON public.kyc_verifications FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 CREATE POLICY "kyc_insert_own"       ON public.kyc_verifications FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 CREATE POLICY "kyc_update_own"       ON public.kyc_verifications FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
--- KYC DOCUMENTS
 CREATE POLICY "kyc_docs_select_own"  ON public.kyc_documents FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM public.kyc_verifications WHERE id = kyc_id AND user_id = auth.uid()) OR public.is_admin());
 CREATE POLICY "kyc_docs_insert_own"  ON public.kyc_documents FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM public.kyc_verifications WHERE id = kyc_id AND user_id = auth.uid()));
 
--- LICENSE VERIFICATIONS
 CREATE POLICY "license_guide_select" ON public.license_verifications FOR SELECT TO authenticated USING (guide_id = auth.uid());
 CREATE POLICY "license_guide_insert" ON public.license_verifications FOR INSERT TO authenticated WITH CHECK (guide_id = auth.uid());
 CREATE POLICY "license_guide_update" ON public.license_verifications FOR UPDATE TO authenticated USING (guide_id = auth.uid());
 CREATE POLICY "license_admin_all"    ON public.license_verifications FOR ALL    TO authenticated USING (public.is_admin());
 
--- GUIDE PROFILES
 CREATE POLICY "guide_profiles_read_all"    ON public.guide_profiles FOR SELECT USING (TRUE);
 CREATE POLICY "guide_profiles_insert_own"  ON public.guide_profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "guide_profiles_update_own"  ON public.guide_profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 CREATE POLICY "guide_profiles_admin_all"   ON public.guide_profiles FOR ALL    TO authenticated USING (public.is_admin());
 
--- DESTINATIONS (public read)
 CREATE POLICY "destinations_read_all"    ON public.destinations FOR SELECT USING (TRUE);
 CREATE POLICY "destinations_admin_write" ON public.destinations FOR ALL    TO authenticated USING (public.is_admin());
 
--- SAVED DESTINATIONS
 CREATE POLICY "saved_destinations_own"   ON public.saved_destinations FOR ALL TO authenticated USING (auth.uid() = user_id);
 
--- TRIP PLANS
 CREATE POLICY "trip_plans_select_own"    ON public.trip_plans FOR SELECT    TO authenticated USING (user_id = auth.uid() OR is_shared = TRUE);
 CREATE POLICY "trip_plans_insert_own"    ON public.trip_plans FOR INSERT    TO authenticated WITH CHECK (user_id = auth.uid());
 CREATE POLICY "trip_plans_update_own"    ON public.trip_plans FOR UPDATE    TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "trip_plans_delete_own"    ON public.trip_plans FOR DELETE    TO authenticated USING (user_id = auth.uid());
 
--- BOOKINGS
 CREATE POLICY "bookings_select_participant" ON public.bookings FOR SELECT TO authenticated
   USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 CREATE POLICY "bookings_insert_tourist"     ON public.bookings FOR INSERT TO authenticated WITH CHECK (tourist_id = auth.uid());
 CREATE POLICY "bookings_update_participant" ON public.bookings FOR UPDATE TO authenticated
   USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 
--- REVIEWS
 CREATE POLICY "reviews_read_all"    ON public.reviews FOR SELECT USING (TRUE);
 CREATE POLICY "reviews_insert_own"  ON public.reviews FOR INSERT TO authenticated WITH CHECK (reviewer_id = auth.uid());
 CREATE POLICY "reviews_admin_all"   ON public.reviews FOR ALL    TO authenticated USING (public.is_admin());
 
--- CHAT REQUESTS
 CREATE POLICY "chat_requests_read_own"      ON public.chat_requests FOR SELECT TO authenticated USING (tourist_id = auth.uid() OR guide_id = auth.uid());
 CREATE POLICY "chat_requests_tourist_insert" ON public.chat_requests FOR INSERT TO authenticated WITH CHECK (tourist_id = auth.uid());
 CREATE POLICY "chat_requests_update_own"    ON public.chat_requests FOR UPDATE TO authenticated USING (tourist_id = auth.uid() OR guide_id = auth.uid());
 CREATE POLICY "chat_requests_tourist_delete" ON public.chat_requests FOR DELETE TO authenticated USING (tourist_id = auth.uid());
 
--- CHAT THREADS
 CREATE POLICY "chat_threads_participant"    ON public.chat_threads FOR ALL TO authenticated
   USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 CREATE POLICY "chat_threads_insert"         ON public.chat_threads FOR INSERT TO authenticated WITH CHECK (guide_id = auth.uid() OR tourist_id = auth.uid());
 
--- CHAT MESSAGES
 CREATE POLICY "chat_messages_read_participant" ON public.chat_messages FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM public.chat_threads ct WHERE ct.id = thread_id AND (ct.tourist_id = auth.uid() OR ct.guide_id = auth.uid())) OR public.is_admin());
 CREATE POLICY "chat_messages_insert_participant" ON public.chat_messages FOR INSERT TO authenticated
@@ -685,24 +611,16 @@ CREATE POLICY "chat_messages_update_participant" ON public.chat_messages FOR UPD
   USING (EXISTS (SELECT 1 FROM public.chat_threads ct WHERE ct.id = thread_id AND (ct.tourist_id = auth.uid() OR ct.guide_id = auth.uid())))
   WITH CHECK (EXISTS (SELECT 1 FROM public.chat_threads ct WHERE ct.id = thread_id AND (ct.tourist_id = auth.uid() OR ct.guide_id = auth.uid())));
 
--- TRANSACTIONS
 CREATE POLICY "transactions_select_own"      ON public.transactions FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 CREATE POLICY "transactions_insert_admin"    ON public.transactions FOR INSERT TO authenticated WITH CHECK (public.is_admin());
 
--- PAYOUTS
 CREATE POLICY "payouts_select_own"           ON public.payouts FOR SELECT TO authenticated USING (auth.uid() = guide_id);
 CREATE POLICY "payouts_insert_admin"         ON public.payouts FOR INSERT TO authenticated WITH CHECK (public.is_admin());
 
--- NOTIFICATIONS
 CREATE POLICY "notifications_own"            ON public.notifications FOR ALL TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 
--- PUSH TOKENS
 CREATE POLICY "push_tokens_own"              ON public.push_tokens FOR ALL    TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "push_tokens_insert_own"       ON public.push_tokens FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-
--- ============================================================================
--- SECTION 7: RPC FUNCTIONS
--- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.search_guides(
   p_district   TEXT           DEFAULT NULL,
@@ -769,19 +687,11 @@ BEGIN
 END;
 $$;
 
--- ============================================================================
--- SECTION 8: REALTIME
--- ============================================================================
-
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_threads;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_requests;
-
--- ============================================================================
--- SECTION 9: SEED DATA — 15 Nepal Destinations
--- ============================================================================
 
 INSERT INTO public.destinations (name, slug, description, short_description, district, province, category, latitude, longitude, altitude_m, cover_image_url, difficulty_level, estimated_duration_hours, entry_fee_npr, estimated_cost_npr, best_season, tags, is_featured, is_active)
 VALUES
@@ -921,10 +831,6 @@ VALUES
  'easy', 3, 1000, 2500,
  ARRAY['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'], ARRAY['durbar-square','kumari','heritage','nepal','kathmandu'], true, true);
 
--- ============================================================================
--- SECTION 10: STORAGE BUCKETS & POLICIES
--- ============================================================================
-
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('avatars', 'avatars', TRUE, 5242880, ARRAY['image/jpeg','image/png','image/webp','image/gif'])
 ON CONFLICT (id) DO NOTHING;
@@ -945,7 +851,6 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 VALUES ('licensed', 'licensed', FALSE, 10485760, ARRAY['image/jpeg','image/png','image/webp','application/pdf'])
 ON CONFLICT (id) DO NOTHING;
 
--- AVATARS — public read, owner write
 DROP POLICY IF EXISTS "avatars_public_read"  ON storage.objects;
 DROP POLICY IF EXISTS "avatars_upload_own"   ON storage.objects;
 DROP POLICY IF EXISTS "avatars_update_own"   ON storage.objects;
@@ -956,7 +861,6 @@ CREATE POLICY "avatars_upload_own"   ON storage.objects FOR INSERT TO authentica
 CREATE POLICY "avatars_update_own"   ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 CREATE POLICY "avatars_delete_own"   ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 
--- DESTINATION IMAGES — public read, admin write
 DROP POLICY IF EXISTS "destination_images_public_read"  ON storage.objects;
 DROP POLICY IF EXISTS "destination_images_admin_write"  ON storage.objects;
 DROP POLICY IF EXISTS "destination_images_admin_delete" ON storage.objects;
@@ -966,7 +870,6 @@ CREATE POLICY "destination_images_public_read"  ON storage.objects FOR SELECT US
 CREATE POLICY "destination_images_admin_write"  ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'destination-images' AND public.is_admin());
 CREATE POLICY "destination_images_admin_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'destination-images' AND public.is_admin());
 
--- KYC DOCUMENTS — owner + admin only
 DROP POLICY IF EXISTS "kyc_docs_upload_own"        ON storage.objects;
 DROP POLICY IF EXISTS "kyc_docs_read_own_or_admin" ON storage.objects;
 DROP POLICY IF EXISTS "kyc_docs_delete_own"        ON storage.objects;
@@ -977,7 +880,6 @@ CREATE POLICY "kyc_docs_read_own_or_admin" ON storage.objects FOR SELECT TO auth
 CREATE POLICY "kyc_docs_update_own"        ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'kyc-documents' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 CREATE POLICY "kyc_docs_delete_own"        ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'kyc-documents' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 
--- LICENSED DOCUMENTS — guide owner + admin only
 DROP POLICY IF EXISTS "licensed_upload_own"        ON storage.objects;
 DROP POLICY IF EXISTS "licensed_read_own_or_admin" ON storage.objects;
 DROP POLICY IF EXISTS "licensed_update_own"        ON storage.objects;
@@ -988,7 +890,6 @@ CREATE POLICY "licensed_read_own_or_admin" ON storage.objects FOR SELECT TO auth
 CREATE POLICY "licensed_update_own"        ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'licensed' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 CREATE POLICY "licensed_delete_own"        ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'licensed' AND (storage.foldername(name))[1] = auth.uid()::TEXT);
 
--- CHAT ATTACHMENTS — thread participants only
 DROP POLICY IF EXISTS "chat_attachments_upload_participant" ON storage.objects;
 DROP POLICY IF EXISTS "chat_attachments_read_participant"   ON storage.objects;
 DROP POLICY IF EXISTS "storage_admin_all"                   ON storage.objects;
@@ -998,10 +899,6 @@ CREATE POLICY "chat_attachments_upload_participant" ON storage.objects FOR INSER
 CREATE POLICY "chat_attachments_read_participant"   ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id = 'chat-attachments' AND (EXISTS (SELECT 1 FROM public.chat_threads ct WHERE ct.id = ((storage.foldername(name))[1])::UUID AND (ct.tourist_id = auth.uid() OR ct.guide_id = auth.uid())) OR public.is_admin()));
 CREATE POLICY "storage_admin_all"                   ON storage.objects FOR ALL TO authenticated USING (public.is_admin());
-
--- ============================================================================
--- DONE
--- ============================================================================
 
 SELECT 'Trip Nepal database setup complete. ' || COUNT(*) || ' destinations seeded.' AS status
 FROM public.destinations;

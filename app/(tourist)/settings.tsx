@@ -102,7 +102,7 @@ export default function SettingsScreen() {
   const displayEmail = user?.email || '—';
   const avatarSrc = profile?.avatar_url || undefined;
 
-  // Dark mode colors
+  
   const bg = isDark ? '#111827' : '#F8F9FA';
   const cardBg = isDark ? '#1F2937' : '#FFFFFF';
   const textColor = isDark ? '#F9FAFB' : '#1A1C1E';
@@ -117,7 +117,7 @@ export default function SettingsScreen() {
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }} showsVerticalScrollIndicator={false}>
         
-        {/* Profile Card */}
+        {}
         <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 20, marginBottom: 28, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
             <View style={{ position: 'relative', marginRight: 16 }}>
@@ -157,7 +157,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Account Settings */}
+        {}
         <Text style={{ fontSize: 11, fontWeight: '700', color: subTextColor, letterSpacing: 1.2, marginBottom: 12 }}>ACCOUNT SETTINGS</Text>
         <View style={{ backgroundColor: cardBg, borderRadius: 16, marginBottom: 28, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Pressable
@@ -184,10 +184,10 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Preferences */}
+        {}
         <Text style={{ fontSize: 11, fontWeight: '700', color: subTextColor, letterSpacing: 1.2, marginBottom: 12 }}>PREFERENCES</Text>
         <View style={{ backgroundColor: cardBg, borderRadius: 16, marginBottom: 28, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
-          {/* Currency */}
+          {}
           <Pressable style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }} onPress={handleCurrency}>
             <IconTile icon={<DollarSign size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
             <View style={{ flex: 1, marginLeft: 12 }}>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
             </View>
             <ChevronRight size={20} color={subTextColor} />
           </Pressable>
-          {/* Language */}
+          {}
           <Pressable style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }} onPress={handleLanguage}>
             <IconTile icon={<Globe size={20} color="#0077B6" />} variant="preferences" className="mr-3" />
             <View style={{ flex: 1, marginLeft: 12 }}>
@@ -207,7 +207,7 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* App Info */}
+        {}
         <Text style={{ fontSize: 11, fontWeight: '700', color: subTextColor, letterSpacing: 1.2, marginBottom: 12 }}>APP INFO</Text>
         <View style={{ backgroundColor: cardBg, borderRadius: 16, marginBottom: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Pressable

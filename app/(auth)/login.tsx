@@ -19,7 +19,7 @@ import { supabase } from "../../src/lib/supabase";
 
 export default function LoginScreen() {
 	const router = useRouter();
-	const [roleIndex, setRoleIndex] = useState(0); // 0 = Customer, 1 = Guide
+	const [roleIndex, setRoleIndex] = useState(0); 
 	const insets = useSafeAreaInsets();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -45,7 +45,7 @@ export default function LoginScreen() {
 
 			if (signInError) throw signInError;
 
-			// Only check role mismatch — navigation is handled by _layout.tsx
+			
 			const { data: profileData } = await supabase
 				.from("profiles")
 				.select("role")
@@ -63,7 +63,7 @@ export default function LoginScreen() {
 				setLoading(false);
 				return;
 			}
-			// _layout.tsx will detect user+profile and navigate automatically
+			
 		} catch (err: any) {
 			const msg: string = err.message || "";
 			if (msg.toLowerCase().includes("email not confirmed")) {

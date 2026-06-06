@@ -37,7 +37,7 @@ export default function DestinationDetailScreen() {
     <View className="flex-1 bg-background">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} bounces={false}>
         
-        {/* Hero Image */}
+        {}
         <View className="h-80 relative">
           <Image source={{ uri: dest.cover_image_url || dest.image_url }} className="w-full h-full" contentFit="cover" />
           <View className="absolute inset-0 bg-black/30" />
@@ -57,7 +57,7 @@ export default function DestinationDetailScreen() {
           </View>
         </View>
 
-        {/* Content */}
+        {}
         <View className="px-6 pt-6 pb-24">
           <View className="flex-row justify-between mb-6">
             <View className="bg-card border border-border p-3 rounded-2xl flex-1 mr-3 items-center">
@@ -87,7 +87,7 @@ export default function DestinationDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating Action */}
+      {}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-border p-4 pb-8 flex-row items-center justify-between">
         <View>
           <Text className="font-sans text-text-secondary text-xs uppercase tracking-wider">Plan Your Trip</Text>
@@ -99,7 +99,6 @@ export default function DestinationDetailScreen() {
   );
 }
 
-// Simple helper component to pad the back button on iOS/Android
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 function SafeAreaHeader({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();

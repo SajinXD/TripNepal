@@ -1,4 +1,4 @@
-// _shared/auth.js — JWT verification + structured logger
+
 
 import { createAdminClient } from "./supabase.js";
 import { errorResponse } from "./cors.js";

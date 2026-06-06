@@ -1,5 +1,4 @@
--- LICENSE VERIFICATIONS table for NTB license submission
--- Admin sets status = 'approved' manually in Supabase dashboard
+
 
 CREATE TABLE IF NOT EXISTS public.license_verifications (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,7 +30,6 @@ CREATE POLICY "license_guide_insert" ON public.license_verifications FOR INSERT 
 CREATE POLICY "license_guide_update" ON public.license_verifications FOR UPDATE TO authenticated USING (guide_id = auth.uid());
 CREATE POLICY "license_admin_all"    ON public.license_verifications FOR ALL    TO authenticated USING (public.is_admin());
 
--- Trigger: sync status back to guide_profiles.ntb_license_status
 CREATE OR REPLACE FUNCTION public.sync_license_status()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN

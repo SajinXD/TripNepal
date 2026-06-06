@@ -98,7 +98,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
       onRequestClose={onClose}
     >
       <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
-        {/* Backdrop */}
+        {}
         <Animated.View
           style={[
             StyleSheet.absoluteFillObject,
@@ -109,12 +109,12 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
           <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         </Animated.View>
 
-        {/* Drawer panel */}
+        {}
         <Animated.View
           style={[styles.drawer, { transform: [{ translateX }] }]}
           pointerEvents="box-none"
         >
-          {/* Header */}
+          {}
           <View style={styles.drawerHeader}>
             <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
               <Avatar
@@ -140,7 +140,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
 
           <View style={styles.divider} />
 
-          {/* Navigation items */}
+          {}
           <View style={{ flex: 1, paddingVertical: 8 }}>
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -162,7 +162,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
 
           <View style={styles.divider} />
 
-          {/* Bottom */}
+          {}
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.navRow}

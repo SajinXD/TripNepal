@@ -53,7 +53,7 @@ export default function TermsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
-      {/* Header */}
+      {}
       <View style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ marginRight: 12 }} hitSlop={8}>
           <ChevronLeft size={24} color="#1A1C1E" />

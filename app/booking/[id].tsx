@@ -27,7 +27,7 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
-    // @ts-ignore
+    
     (supabase.from('bookings') as any)
       .select('*, tourist:profiles!tourist_id(full_name, phone), guide:guide_profiles!guide_id(profiles!id(full_name))')
       .eq('id', id)
@@ -43,13 +43,13 @@ export default function BookingDetailScreen() {
     setActionLoading(true);
     
     try {
-      // @ts-ignore
+      
       await (supabase.from('bookings') as any)
         .update({ status: action, responded_at: new Date().toISOString() })
         .eq('id', booking.id);
 
       if (action === 'accepted') {
-        // @ts-ignore
+        
         await (supabase.from('chat_threads') as any).upsert(
           { tourist_id: booking.tourist_id, guide_id: booking.guide_id },
           { onConflict: 'tourist_id,guide_id', ignoreDuplicates: true }
@@ -65,7 +65,7 @@ export default function BookingDetailScreen() {
   }
 
   async function openChat() {
-    // @ts-ignore
+    
     const { data } = await (supabase.from('chat_threads') as any)
       .select('id')
       .eq('tourist_id', booking.tourist_id)
@@ -96,7 +96,7 @@ export default function BookingDetailScreen() {
       </View>
 
       <ScrollView className="flex-1 px-6 pt-5" showsVerticalScrollIndicator={false}>
-        {/* Party card */}
+        {}
         <View className="bg-white rounded-2xl border border-border p-5 mb-4">
           <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-3">{isGuide ? 'Tourist' : 'Your Guide'}</Text>
           <View className="flex-row items-center">
@@ -111,7 +111,7 @@ export default function BookingDetailScreen() {
           </View>
         </View>
 
-        {/* Trip details */}
+        {}
         <View className="bg-white rounded-2xl border border-border p-5 mb-4">
           <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-4">Trip Details</Text>
           <View className="gap-3">
@@ -149,7 +149,7 @@ export default function BookingDetailScreen() {
           </View>
         </View>
 
-        {/* Payment — tourist view only */}
+        {}
         {!isGuide && (
           <View className="bg-white rounded-2xl border border-border p-5 mb-8">
             <Text className="font-semibold text-text-secondary text-xs uppercase tracking-wider mb-4">Payment</Text>
@@ -188,7 +188,7 @@ export default function BookingDetailScreen() {
                 setBooking((p: any) => ({ ...p, status: 'cancelled' }));
                 setActionLoading(true);
                 try {
-                  // @ts-ignore
+                  
                   const { error } = await (supabase.from('bookings') as any).update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', booking.id);
                   if (error) throw error;
                 } catch (e: any) {

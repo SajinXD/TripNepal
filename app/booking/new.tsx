@@ -29,7 +29,7 @@ export default function NewBookingScreen() {
   const guideAreas: string[] = guide?.service_areas ?? [];
   const showAreaPicker = guideAreas.length > 0;
 
-  // Price is purely area-based — sum of selected area daily rates
+  
   const baseRatePerDay = selectedAreas.reduce((sum, a) => sum + (areaMap[a] ?? 0), 0);
   const subtotal = parseInt(days || '0') * baseRatePerDay;
   const serviceFee = Math.round(subtotal * 0.05);
@@ -74,7 +74,7 @@ export default function NewBookingScreen() {
       end.setDate(end.getDate() + parseInt(days || '1') - 1);
       const endDateStr = end.toISOString().split('T')[0];
 
-      // @ts-ignore
+      
       const { data: booking, error } = await (supabase
         .from('bookings') as any)
         .insert({
@@ -126,7 +126,7 @@ export default function NewBookingScreen() {
       >
         <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* Guide Info Card */}
+          {}
           {loadingGuide ? (
             <View className="bg-white border border-border rounded-2xl p-5 mb-6 items-center">
               <ActivityIndicator color="#8B1A1A" />
@@ -153,7 +153,7 @@ export default function NewBookingScreen() {
             </View>
           ) : null}
 
-          {/* Area Picker — only when guide has per-area pricing */}
+          {}
           {!loadingGuide && showAreaPicker && (guide?.service_areas ?? []).length > 0 && (
             <View className="mb-5">
               <Text className="font-semibold text-sm text-text mb-2">

@@ -10,7 +10,7 @@ DECLARE
   v_badge_count int;
   v_messages_count int;
 BEGIN
-  -- Insert Users into auth.users (triggers profile creation)
+  
   INSERT INTO auth.users (id, instance_id, aud, role, email) VALUES (v_guide_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'guide_test@example.com');
   INSERT INTO auth.users (id, instance_id, aud, role, email) VALUES (v_tourist1_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'touristA@example.com');
   INSERT INTO auth.users (id, instance_id, aud, role, email) VALUES (v_tourist2_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'touristB@example.com');
@@ -18,11 +18,11 @@ BEGIN
   UPDATE public.profiles SET role = 'guide' WHERE id = v_guide_id;
   INSERT INTO public.guide_profiles (id) VALUES (v_guide_id);
 
-  -- Tourist A books the guide
+  
   INSERT INTO public.bookings (id, tourist_id, guide_id, status, start_date, end_date)
   VALUES (v_booking_id, v_tourist1_id, v_guide_id, 'requested', CURRENT_DATE, CURRENT_DATE + 3);
 
-  -- Guide accepts
+  
   UPDATE public.bookings SET status = 'accepted' WHERE id = v_booking_id;
   INSERT INTO public.chat_threads (id, booking_id, tourist_id, guide_id)
   VALUES (v_thread_id, v_booking_id, v_tourist1_id, v_guide_id);
@@ -30,7 +30,7 @@ BEGIN
   INSERT INTO public.chat_messages (thread_id, sender_id, message)
   VALUES (v_thread_id, v_tourist1_id, 'Hello guide!');
 
-  -- Test 1: Inbox badge correctness
+  
   INSERT INTO public.bookings (tourist_id, guide_id, status, start_date, end_date)
   VALUES (v_tourist2_id, v_guide_id, 'requested', CURRENT_DATE, CURRENT_DATE + 1);
 
@@ -40,11 +40,11 @@ BEGIN
 
   ASSERT v_badge_count = 1, 'Badge count should be 1';
 
-  -- Switch to Tourist B context
+  
   SET LOCAL role authenticated;
   PERFORM set_config('request.jwt.claims', format('{"sub": "%s", "role": "authenticated"}', v_tourist2_id), true);
 
-  -- Test 2: RLS on chat_messages (Tourist B reading Tourist A's messages)
+  
   SELECT count(*) INTO v_messages_count FROM public.chat_messages WHERE thread_id = v_thread_id;
   ASSERT v_messages_count = 0, 'RLS LEAK: Tourist B can read Tourist As messages!';
 

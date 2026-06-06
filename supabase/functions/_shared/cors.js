@@ -1,4 +1,4 @@
-// _shared/cors.js — CORS headers for all Edge Functions
+
 
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

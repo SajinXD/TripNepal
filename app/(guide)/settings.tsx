@@ -43,11 +43,11 @@ export default function GuideSettingsScreen() {
 	const [kycStatus, setKycStatus] = useState<string>("not_submitted");
 	const [loading, setLoading] = useState(true);
 
-	// Negotiable toggle
+	
 	const [priceNegotiable, setPriceNegotiable] = useState(false);
 	const [savingNegotiable, setSavingNegotiable] = useState(false);
 
-	// NTB License section
+	
 	const [ntbLicenseNumber, setNtbLicenseNumber] = useState("");
 	const [ntbLicenseUrl, setNtbLicenseUrl] = useState<string | null>(null);
 	const [ntbLicenseStatus, setNtbLicenseStatus] =
@@ -81,12 +81,12 @@ export default function GuideSettingsScreen() {
 				setPriceNegotiable(gpData.price_negotiable ?? false);
 				setNtbLicenseNumber(gpData.guide_license_number ?? "");
 			}
-			// License status from license_verifications table
+			
 			const licStatus = lv.data?.status ?? "not_submitted";
 			setNtbLicenseStatus(licStatus);
 			if (lv.data?.license_url) setNtbLicenseUrl(lv.data.license_url);
 			if (lv.data?.license_number) setNtbLicenseNumber(lv.data.license_number ?? "");
-			// Auto-expand form only when not yet submitted
+			
 			setNtbExpanded(licStatus === "not_submitted");
 
 			if (gpData?.is_verified) {
@@ -232,7 +232,7 @@ export default function GuideSettingsScreen() {
 				style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }}
 				showsVerticalScrollIndicator={false}
 			>
-				{/* Profile Card */}
+				{}
 				<View
 					style={{
 						backgroundColor: "#fff",
@@ -330,7 +330,7 @@ export default function GuideSettingsScreen() {
 						</View>
 					</View>
 
-					{/* Stats */}
+					{}
 					{loading ? (
 						<ActivityIndicator color="#8B1A1A" />
 					) : (
@@ -430,10 +430,10 @@ export default function GuideSettingsScreen() {
 					)}
 				</View>
 
-				{/* KYC Status Banner */}
+				{}
 				{kycStatus !== "approved" &&
 					(kycStatus === "pending" ? (
-						// Non-clickable when under review
+						
 						<View
 							style={{
 								backgroundColor: "#FEF3C7",
@@ -467,7 +467,7 @@ export default function GuideSettingsScreen() {
 							</View>
 						</View>
 					) : (
-						// Non-clickable for not_submitted / rejected
+						
 						<View
 							style={{
 								backgroundColor: "#FEE2E2",
@@ -495,7 +495,7 @@ export default function GuideSettingsScreen() {
 						</View>
 					))}
 
-				{/* NTB LICENSE */}
+				{}
 				<Text
 					style={{
 						fontSize: 11,
@@ -508,7 +508,7 @@ export default function GuideSettingsScreen() {
 					NTB LICENSE
 				</Text>
 
-				{/* Non-clickable status banner */}
+				{}
 				<View
 					style={{
 						backgroundColor:
@@ -569,7 +569,7 @@ export default function GuideSettingsScreen() {
 					</View>
 				</View>
 
-				{/* Accordion toggle — hidden when approved */}
+				{}
 				{ntbLicenseStatus !== "approved" && (
 					<TouchableOpacity
 						onPress={() => setNtbExpanded(!ntbExpanded)}
@@ -611,7 +611,7 @@ export default function GuideSettingsScreen() {
 					</TouchableOpacity>
 				)}
 
-				{/* Collapsible form */}
+				{}
 				{ntbExpanded && ntbLicenseStatus !== "approved" && (
 					<View
 						style={{
@@ -734,12 +734,12 @@ export default function GuideSettingsScreen() {
 					</View>
 				)}
 
-				{/* Spacer when approved and form hidden */}
+				{}
 				{ntbLicenseStatus === "approved" && (
 					<View style={{ marginBottom: 24 }} />
 				)}
 
-				{/* PRICING */}
+				{}
 				<Text
 					style={{
 						fontSize: 11,
@@ -808,7 +808,7 @@ export default function GuideSettingsScreen() {
 					</View>
 				</View>
 
-				{/* ACCOUNT */}
+				{}
 				<Text
 					style={{
 						fontSize: 11,
@@ -865,7 +865,7 @@ export default function GuideSettingsScreen() {
 					</Pressable>
 				</View>
 
-				{/* SUPPORT */}
+				{}
 				<Text
 					style={{
 						fontSize: 11,

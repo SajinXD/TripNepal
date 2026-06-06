@@ -13,7 +13,7 @@ interface IconTileProps {
 export function IconTile({ icon, variant = 'info', className }: IconTileProps) {
   const variants = {
     primary: 'bg-mint',
-    preferences: 'bg-[#E1F0FF]', // Light blue tint
+    preferences: 'bg-[#E1F0FF]', 
     info: 'bg-surface-container',
     danger: 'bg-error-container',
   };

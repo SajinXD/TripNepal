@@ -1,6 +1,4 @@
--- Atomic find-or-create for chat threads.
--- Supabase upsert returns null data when the row already exists (no-op update),
--- causing thread.id to throw TypeError in the app. This RPC always returns the id.
+
 
 CREATE OR REPLACE FUNCTION public.find_or_create_chat_thread(
   p_tourist_id uuid,

@@ -1,4 +1,4 @@
-// babel.config.js
+
 module.exports = function (api) {
   api.cache(true);
   return {
@@ -7,7 +7,7 @@ module.exports = function (api) {
       'nativewind/babel',
     ],
     plugins: [
-      // Path alias support: import x from '@/lib/supabase'
+      
       [
         'module-resolver',
         {
@@ -17,7 +17,7 @@ module.exports = function (api) {
           },
         },
       ],
-      'react-native-reanimated/plugin', // must be last
+      'react-native-reanimated/plugin', 
     ],
   };
 };

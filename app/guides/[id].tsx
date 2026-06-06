@@ -83,7 +83,7 @@ export default function GuideDetailScreen() {
       if (g) setGuide(g);
       if (r) setReviews(r);
 
-      // Calculate performance stats from bookings
+      
       const [{ data: bkReqs }, { data: bkAll }] = await Promise.all([
         (supabase.from('bookings') as any)
           .select('status')
@@ -205,7 +205,7 @@ export default function GuideDetailScreen() {
     <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
-        {/* Hero */}
+        {}
         <View style={[styles.hero, { paddingTop: insets.top + 16 }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
             <ChevronLeft size={22} color="#1A1C1E" />
@@ -246,7 +246,7 @@ export default function GuideDetailScreen() {
 
         <View style={{ paddingHorizontal: 20 }}>
 
-          {/* Stats row */}
+          {}
           <View style={styles.statsRow}>
             <View style={styles.statCell}>
               <Calendar size={18} color="#8B1A1A" />
@@ -282,7 +282,7 @@ export default function GuideDetailScreen() {
             </View>
           </View>
 
-          {/* Specializations */}
+          {}
           {(guide.specializations?.length ?? 0) > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Specializations</Text>
@@ -296,7 +296,7 @@ export default function GuideDetailScreen() {
             </View>
           )}
 
-          {/* Service Areas */}
+          {}
           {(guide.service_areas?.length ?? 0) > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Service Areas</Text>
@@ -311,7 +311,7 @@ export default function GuideDetailScreen() {
             </View>
           )}
 
-          {/* Languages */}
+          {}
           {(guide.languages_spoken?.length ?? 0) > 0 && (
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
@@ -324,7 +324,7 @@ export default function GuideDetailScreen() {
             </View>
           )}
 
-          {/* Bio */}
+          {}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
             <Text style={{ fontSize: 14, color: '#414844', lineHeight: 22 }}>
@@ -332,7 +332,7 @@ export default function GuideDetailScreen() {
             </Text>
           </View>
 
-          {/* Performance */}
+          {}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Performance</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -351,7 +351,7 @@ export default function GuideDetailScreen() {
             </View>
           </View>
 
-          {/* Reviews */}
+          {}
           <View style={styles.section}>
             <View style={{ marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>Reviews ({totalReviews})</Text>
@@ -384,11 +384,11 @@ export default function GuideDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating CTA */}
+      {}
       <View style={[styles.cta, { paddingBottom: insets.bottom + 12 }]}>
         {user?.id !== id && (
           <View style={{ width: '100%' }}>
-            {/* Row 1: Book Now + Message Guide */}
+            {}
             <View style={{ flexDirection: 'row', marginBottom: 10 }}>
               <TouchableOpacity
                 style={[styles.ctaBtn, { backgroundColor: '#8B1A1A', marginRight: 8 }]}
@@ -414,7 +414,7 @@ export default function GuideDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Row 2: Find Another Guide */}
+            {}
             <TouchableOpacity
               style={[styles.ctaBtn, { backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' }]}
               activeOpacity={0.8}
@@ -426,7 +426,7 @@ export default function GuideDetailScreen() {
         )}
       </View>
 
-      {/* Review Modal */}
+      {}
       <Modal visible={reviewModal} transparent animationType="slide" onRequestClose={() => setReviewModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setReviewModal(false)} />
         <View style={styles.modalSheet}>

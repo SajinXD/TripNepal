@@ -8,7 +8,6 @@ const writeIfDifferent = (filePath, content) => {
   console.log('Wrote screen:', filePath);
 };
 
-// 5. Explore Map
 writeIfDifferent(path.join(__dirname, 'app/(tourist)/explore.tsx'), `import React from 'react';
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -101,7 +100,6 @@ export default function ExploreScreen() {
 }
 `);
 
-// 6. AI Sherpa
 writeIfDifferent(path.join(__dirname, 'app/(tourist)/ai-plan.tsx'), `import React from 'react';
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
 import { Bot, Plus, Mic, Send, Navigation, Info, Utensils, Mountain } from 'lucide-react-native';
@@ -211,7 +209,6 @@ export default function AiPlanScreen() {
 }
 `);
 
-// 7. Settings
 writeIfDifferent(path.join(__dirname, 'app/(tourist)/settings.tsx'), `import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Pencil, User, Shield, Moon, Bell, DollarSign, Globe, HelpCircle, FileText, LogOut, ChevronRight } from 'lucide-react-native';

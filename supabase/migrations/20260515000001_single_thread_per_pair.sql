@@ -1,8 +1,5 @@
--- Enforce one chat thread per tourist-guide pair.
--- Deduplicate existing rows, then replace the partial unique index with a full one.
 
--- Step 1: Merge duplicate threads — keep the most recently active per pair,
---         reassign all messages from duplicates to the canonical thread.
+
 DO $$
 DECLARE
   r RECORD;
@@ -36,10 +33,8 @@ BEGIN
   END LOOP;
 END $$;
 
--- Step 2: Drop old constraints / partial index
 ALTER TABLE public.chat_threads DROP CONSTRAINT IF EXISTS chat_threads_booking_id_key;
 DROP INDEX IF EXISTS idx_chat_threads_tourist_guide_no_booking;
 
--- Step 3: One thread per pair
 ALTER TABLE public.chat_threads
   ADD CONSTRAINT chat_threads_tourist_guide_unique UNIQUE (tourist_id, guide_id);

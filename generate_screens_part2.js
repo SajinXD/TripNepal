@@ -8,7 +8,6 @@ const writeIfDifferent = (filePath, content) => {
   console.log('Wrote screen:', filePath);
 };
 
-// 3. Tourist Home Screen
 writeIfDifferent(path.join(__dirname, 'app/(tourist)/home.tsx'), `import React from 'react';
 import { View, Text, ScrollView, ImageBackground, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -164,7 +163,6 @@ export default function HomeScreen() {
 }
 `);
 
-// 4. Currency Converter Screen
 writeIfDifferent(path.join(__dirname, 'app/converter.tsx'), `import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { ArrowUpDown, RefreshCcw, Info, Clock } from 'lucide-react-native';

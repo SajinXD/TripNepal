@@ -86,7 +86,7 @@ export default function ExploreScreen() {
         searchQuery={searchQuery}
       />
 
-      {/* Search bar */}
+      {}
       <View style={{ paddingTop: insets.top + 10 }} className="px-5 w-full absolute top-0 z-10">
         <View
           className="bg-white h-12 rounded-[16px] flex-row items-center px-4 shadow-sm"

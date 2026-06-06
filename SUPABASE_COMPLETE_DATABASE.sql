@@ -1,12 +1,4 @@
--- ============================================================================
--- TRIP NEPAL — COMPLETE DATABASE SETUP (Single Paste)
--- Paste this entire file into Supabase → SQL Editor → Run
--- Works with the Expo app, AI Edge Function, and all features
--- ============================================================================
 
--- ============================================================================
--- STEP 0: CLEAN SLATE (safe to run on empty project)
--- ============================================================================
 
 DROP TABLE IF EXISTS public.push_tokens          CASCADE;
 DROP TABLE IF EXISTS public.notifications        CASCADE;
@@ -31,16 +23,8 @@ DROP TYPE IF EXISTS payment_status   CASCADE;
 DROP TYPE IF EXISTS trip_category    CASCADE;
 DROP TYPE IF EXISTS document_type    CASCADE;
 
--- ============================================================================
--- STEP 1: EXTENSIONS
--- ============================================================================
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";      -- fuzzy destination search
-
--- ============================================================================
--- STEP 2: ENUMS
--- ============================================================================
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";      
 
 CREATE TYPE user_role AS ENUM ('tourist', 'guide', 'admin');
 CREATE TYPE kyc_status AS ENUM ('not_submitted', 'pending', 'approved', 'rejected', 'resubmit');
@@ -48,10 +32,6 @@ CREATE TYPE booking_status AS ENUM ('requested', 'accepted', 'rejected', 'in_pro
 CREATE TYPE payment_status AS ENUM ('pending', 'held', 'released', 'refunded', 'failed');
 CREATE TYPE trip_category AS ENUM ('trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing', 'food', 'photography');
 CREATE TYPE document_type AS ENUM ('citizenship', 'passport', 'driving_license', 'guide_license', 'selfie');
-
--- ============================================================================
--- STEP 3: PROFILES (extends auth.users)
--- ============================================================================
 
 CREATE TABLE public.profiles (
   id                 UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -73,10 +53,6 @@ CREATE TABLE public.profiles (
 
 CREATE INDEX idx_profiles_role  ON public.profiles(role);
 CREATE INDEX idx_profiles_phone ON public.profiles(phone);
-
--- ============================================================================
--- STEP 4: KYC
--- ============================================================================
 
 CREATE TABLE public.kyc_verifications (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -108,10 +84,6 @@ CREATE TABLE public.kyc_documents (
   mime_type      TEXT,
   uploaded_at    TIMESTAMPTZ DEFAULT NOW()
 );
-
--- ============================================================================
--- STEP 5: GUIDE PROFILES
--- ============================================================================
 
 CREATE TABLE public.guide_profiles (
   id                   UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -146,16 +118,12 @@ CREATE INDEX idx_guide_verified ON public.guide_profiles(is_verified);
 CREATE INDEX idx_guide_areas    ON public.guide_profiles USING GIN(service_areas);
 CREATE INDEX idx_guide_lang     ON public.guide_profiles USING GIN(languages_spoken);
 
--- ============================================================================
--- STEP 6: DESTINATIONS
--- ============================================================================
-
 CREATE TABLE public.destinations (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name                  TEXT NOT NULL,
   slug                  TEXT UNIQUE NOT NULL,
   description           TEXT,
-  short_desc            TEXT,                  -- used by AI planner
+  short_desc            TEXT,                  
   district              TEXT NOT NULL,
   province              TEXT,
   category              trip_category[] DEFAULT '{sightseeing}',
@@ -167,7 +135,7 @@ CREATE TABLE public.destinations (
   best_season           TEXT[],
   difficulty_level      TEXT CHECK (difficulty_level IN ('easy','moderate','hard','expert')),
   estimated_duration_hours INT,
-  avg_visit_hrs         NUMERIC(4,1),           -- used by AI planner
+  avg_visit_hrs         NUMERIC(4,1),           
   entry_fee_npr         NUMERIC(10,2),
   tags                  TEXT[],
   is_featured           BOOLEAN DEFAULT FALSE,
@@ -190,10 +158,6 @@ CREATE TABLE public.saved_destinations (
   saved_at       TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (user_id, destination_id)
 );
-
--- ============================================================================
--- STEP 7: AI TRIP PLANS
--- ============================================================================
 
 CREATE TABLE public.trip_plans (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -223,16 +187,12 @@ CREATE TABLE public.trip_plans (
 
 CREATE INDEX idx_trip_plans_tourist ON public.trip_plans(tourist_id);
 
--- ============================================================================
--- STEP 8: BOOKINGS
--- ============================================================================
-
 CREATE TABLE public.bookings (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tourist_id            UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   guide_id              UUID NOT NULL REFERENCES public.guide_profiles(id) ON DELETE RESTRICT,
   trip_plan_id          UUID REFERENCES public.trip_plans(id),
-  -- Trip details
+  
   start_date            DATE NOT NULL,
   end_date              DATE NOT NULL,
   start_time            TIME,
@@ -244,7 +204,7 @@ CREATE TABLE public.bookings (
   trip_category         trip_category,
   district              TEXT,
   special_notes         TEXT,
-  -- Pricing (NPR)
+  
   hourly_rate_npr       NUMERIC(10,2),
   daily_rate_npr        NUMERIC(10,2),
   total_hours           NUMERIC(6,2),
@@ -252,7 +212,7 @@ CREATE TABLE public.bookings (
   subtotal_npr          NUMERIC(12,2) NOT NULL DEFAULT 0,
   service_fee_npr       NUMERIC(10,2) DEFAULT 0,
   total_amount_npr      NUMERIC(12,2) NOT NULL DEFAULT 0,
-  -- Status
+  
   status                booking_status NOT NULL DEFAULT 'requested',
   requested_at          TIMESTAMPTZ DEFAULT NOW(),
   responded_at          TIMESTAMPTZ,
@@ -261,7 +221,7 @@ CREATE TABLE public.bookings (
   cancelled_at          TIMESTAMPTZ,
   cancellation_reason   TEXT,
   cancelled_by          UUID REFERENCES public.profiles(id),
-  -- Payment
+  
   payment_status        payment_status DEFAULT 'pending',
   payment_method        TEXT,
   payment_transaction_id TEXT,
@@ -273,10 +233,6 @@ CREATE INDEX idx_bookings_tourist ON public.bookings(tourist_id);
 CREATE INDEX idx_bookings_guide   ON public.bookings(guide_id);
 CREATE INDEX idx_bookings_status  ON public.bookings(status);
 CREATE INDEX idx_bookings_dates   ON public.bookings(start_date, end_date);
-
--- ============================================================================
--- STEP 9: REVIEWS
--- ============================================================================
 
 CREATE TABLE public.reviews (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -296,10 +252,6 @@ CREATE TABLE public.reviews (
 );
 
 CREATE INDEX idx_reviews_reviewee ON public.reviews(reviewee_id);
-
--- ============================================================================
--- STEP 10: CHAT
--- ============================================================================
 
 CREATE TABLE public.chat_threads (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -328,10 +280,6 @@ CREATE TABLE public.chat_messages (
 );
 
 CREATE INDEX idx_chat_messages_thread ON public.chat_messages(thread_id, created_at DESC);
-
--- ============================================================================
--- STEP 11: TRANSACTIONS & PAYOUTS
--- ============================================================================
 
 CREATE TABLE public.transactions (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -365,10 +313,6 @@ CREATE TABLE public.payouts (
 
 CREATE INDEX idx_payouts_guide ON public.payouts(guide_id);
 
--- ============================================================================
--- STEP 12: NOTIFICATIONS & PUSH TOKENS
--- ============================================================================
-
 CREATE TABLE public.notifications (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -391,10 +335,6 @@ CREATE TABLE public.push_tokens (
   PRIMARY KEY (user_id, token)
 );
 
--- ============================================================================
--- STEP 13: ROW LEVEL SECURITY
--- ============================================================================
-
 ALTER TABLE public.profiles           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_verifications  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_documents      ENABLE ROW LEVEL SECURITY;
@@ -411,54 +351,44 @@ ALTER TABLE public.payouts            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_tokens        ENABLE ROW LEVEL SECURITY;
 
--- Helper: is caller an admin?
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin');
 $$;
 
--- PROFILES
 CREATE POLICY "profiles_read"        ON public.profiles FOR SELECT USING (TRUE);
 CREATE POLICY "profiles_insert_own"  ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "profiles_update_own"  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 CREATE POLICY "profiles_admin"       ON public.profiles FOR ALL TO authenticated USING (public.is_admin());
 
--- KYC
 CREATE POLICY "kyc_own_select"  ON public.kyc_verifications FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 CREATE POLICY "kyc_own_insert"  ON public.kyc_verifications FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 CREATE POLICY "kyc_own_update"  ON public.kyc_verifications FOR UPDATE TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 CREATE POLICY "kyc_docs_own"    ON public.kyc_documents FOR ALL TO authenticated
   USING (EXISTS (SELECT 1 FROM public.kyc_verifications k WHERE k.id = kyc_id AND k.user_id = auth.uid()));
 
--- GUIDE PROFILES
 CREATE POLICY "guide_read_all"      ON public.guide_profiles FOR SELECT USING (TRUE);
 CREATE POLICY "guide_insert_own"    ON public.guide_profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "guide_update_own"    ON public.guide_profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 
--- DESTINATIONS — public
 CREATE POLICY "dest_read_all"   ON public.destinations FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "dest_admin_rw"   ON public.destinations FOR ALL TO authenticated USING (public.is_admin());
 
--- SAVED DESTINATIONS
 CREATE POLICY "saved_own" ON public.saved_destinations FOR ALL TO authenticated USING (auth.uid() = user_id);
 
--- TRIP PLANS
 CREATE POLICY "trips_select" ON public.trip_plans FOR SELECT TO authenticated USING (tourist_id = auth.uid() OR is_shared = TRUE OR public.is_admin());
 CREATE POLICY "trips_insert" ON public.trip_plans FOR INSERT TO authenticated WITH CHECK (tourist_id = auth.uid());
 CREATE POLICY "trips_update" ON public.trip_plans FOR UPDATE TO authenticated USING (tourist_id = auth.uid());
 CREATE POLICY "trips_delete" ON public.trip_plans FOR DELETE TO authenticated USING (tourist_id = auth.uid());
 
--- BOOKINGS
 CREATE POLICY "bookings_select" ON public.bookings FOR SELECT TO authenticated USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 CREATE POLICY "bookings_insert" ON public.bookings FOR INSERT TO authenticated WITH CHECK (tourist_id = auth.uid());
 CREATE POLICY "bookings_update" ON public.bookings FOR UPDATE TO authenticated USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 
--- REVIEWS
 CREATE POLICY "reviews_read"   ON public.reviews FOR SELECT USING (is_visible = TRUE);
 CREATE POLICY "reviews_insert" ON public.reviews FOR INSERT TO authenticated WITH CHECK (reviewer_id = auth.uid());
 CREATE POLICY "reviews_admin"  ON public.reviews FOR ALL TO authenticated USING (public.is_admin());
 
--- CHAT
 CREATE POLICY "thread_participant" ON public.chat_threads FOR ALL TO authenticated
   USING (tourist_id = auth.uid() OR guide_id = auth.uid() OR public.is_admin());
 CREATE POLICY "msg_read" ON public.chat_messages FOR SELECT TO authenticated
@@ -466,24 +396,15 @@ CREATE POLICY "msg_read" ON public.chat_messages FOR SELECT TO authenticated
 CREATE POLICY "msg_send" ON public.chat_messages FOR INSERT TO authenticated
   WITH CHECK (sender_id = auth.uid() AND EXISTS (SELECT 1 FROM public.chat_threads t WHERE t.id = thread_id AND (t.tourist_id = auth.uid() OR t.guide_id = auth.uid())));
 
--- TRANSACTIONS
 CREATE POLICY "txn_own" ON public.transactions FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 
--- PAYOUTS
 CREATE POLICY "payouts_guide_own" ON public.payouts FOR SELECT TO authenticated USING (guide_id = auth.uid() OR public.is_admin());
 
--- NOTIFICATIONS
 CREATE POLICY "notif_own" ON public.notifications FOR ALL TO authenticated USING (user_id = auth.uid() OR public.is_admin());
 
--- PUSH TOKENS
 CREATE POLICY "push_own"        ON public.push_tokens FOR ALL TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "push_insert_own" ON public.push_tokens FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 
--- ============================================================================
--- STEP 14: FUNCTIONS & TRIGGERS
--- ============================================================================
-
--- Auto-create profile + guide_profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -510,7 +431,6 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Auto-update updated_at
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
@@ -524,7 +444,6 @@ CREATE TRIGGER trg_trip_plans_updated_at      BEFORE UPDATE ON public.trip_plans
 CREATE TRIGGER trg_transactions_updated_at    BEFORE UPDATE ON public.transactions       FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER trg_payouts_updated_at         BEFORE UPDATE ON public.payouts            FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- Update guide rating after review
 CREATE OR REPLACE FUNCTION public.update_guide_rating()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -542,7 +461,6 @@ CREATE TRIGGER trg_update_guide_rating
   FOR EACH ROW WHEN (NEW.is_guide_review = TRUE)
   EXECUTE FUNCTION public.update_guide_rating();
 
--- Increment guide trip count on booking completion
 CREATE OR REPLACE FUNCTION public.handle_booking_completed()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -557,7 +475,6 @@ CREATE TRIGGER trg_booking_completed
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION public.handle_booking_completed();
 
--- Update chat thread on new message
 CREATE OR REPLACE FUNCTION public.update_chat_thread_on_message()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE v_thread public.chat_threads%ROWTYPE;
@@ -577,11 +494,6 @@ CREATE TRIGGER trg_chat_message_inserted
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW EXECUTE FUNCTION public.update_chat_thread_on_message();
 
--- ============================================================================
--- STEP 15: RPC FUNCTIONS (called from app)
--- ============================================================================
-
--- Atomically create booking + chat thread
 CREATE OR REPLACE FUNCTION public.create_booking_with_thread(
   p_tourist_id        UUID,
   p_guide_id          UUID,
@@ -623,7 +535,6 @@ BEGIN
 END;
 $$;
 
--- Search guides with filters + distance
 CREATE OR REPLACE FUNCTION public.search_guides(
   p_district   TEXT            DEFAULT NULL,
   p_languages  TEXT[]          DEFAULT NULL,
@@ -663,7 +574,6 @@ BEGIN
 END;
 $$;
 
--- Guide dashboard stats
 CREATE OR REPLACE FUNCTION public.guide_dashboard_stats(p_guide_id UUID)
 RETURNS JSONB LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
 DECLARE
@@ -680,24 +590,15 @@ BEGIN
 END;
 $$;
 
--- Mark notifications as read
 CREATE OR REPLACE FUNCTION public.mark_all_notifications_read(p_user_id UUID)
 RETURNS VOID LANGUAGE sql SECURITY DEFINER AS $$
   UPDATE public.notifications SET is_read = TRUE WHERE user_id = p_user_id AND is_read = FALSE;
 $$;
 
--- ============================================================================
--- STEP 16: REALTIME — enable on chat tables
--- ============================================================================
-
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_threads;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
-
--- ============================================================================
--- STEP 17: SEED DATA — Destinations
--- ============================================================================
 
 INSERT INTO public.destinations (name, slug, description, short_desc, district, province, category, latitude, longitude, altitude_m, difficulty_level, avg_visit_hrs, entry_fee_npr, is_featured, cover_image_url, tags) VALUES
 ('Pashupatinath Temple',    'pashupatinath-temple',    'Sacred Hindu temple complex on the Bagmati River, UNESCO World Heritage Site.',     'Nepal''s most sacred Hindu temple.',        'Kathmandu', 'Bagmati',  '{spiritual,cultural}',    27.7106, 85.3487, 1400, 'easy',     2.0,  500,   TRUE, 'https://images.unsplash.com/photo-1605649461784-e69109bb0f7b?w=800', '{unesco,hindu,heritage,temple}'),
@@ -716,35 +617,3 @@ INSERT INTO public.destinations (name, slug, description, short_desc, district, 
 ('Sarangkot',               'sarangkot',               'Popular viewpoint for sunrise and paragliding with panoramic Annapurna views.',     'Top paragliding launch site in Nepal.',     'Kaski',     'Gandaki',  '{adventure,photography}', 28.2389, 83.9639, 1592, 'easy',     3.0,  0,     FALSE,'https://images.unsplash.com/photo-1489769832850-d7ab6f3e3c1d?w=800', '{paragliding,sunrise,annapurna,viewpoint}'),
 ('Langtang Valley',         'langtang-valley',         'Beautiful trekking valley north of Kathmandu with Tamang culture and glaciers.',    'Closest trek to Kathmandu city.',           'Rasuwa',    'Bagmati',  '{trekking,wildlife}',     28.2120, 85.5157, 3430, 'moderate', 0.0,  3000,  FALSE,'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', '{langtang,tamang,glacier,valley}');
 
--- ============================================================================
--- STEP 18: SEED DATA — Demo Guide (for presentation)
--- ============================================================================
-
--- Creates a demo tourist + guide in auth (use Dashboard > Auth > Add User for real accounts)
--- OR run the app's signup flow to create real accounts
-
--- Demo data: if you want to test without signup, use Supabase Dashboard
--- Authentication → Users → Add user
--- Email: tourist@demo.com  Password: Demo1234!  metadata: {"full_name":"Ram Bahadur","role":"tourist"}
--- Email: guide@demo.com    Password: Demo1234!  metadata: {"full_name":"Pemba Sherpa","role":"guide"}
-
--- After creating those users, update guide_profiles manually:
--- UPDATE public.guide_profiles SET is_verified=TRUE, is_online=TRUE, price_per_day=3500,
---   languages_spoken='{english,nepali}', specializations='{trekking,adventure}',
---   service_areas='{kaski,solukhumbu}', years_of_experience=8, bio_long='Expert Himalayan guide...'
--- WHERE id = (SELECT id FROM auth.users WHERE email='guide@demo.com');
-
--- ============================================================================
--- DONE!
--- ============================================================================
--- Tables created: profiles, kyc_verifications, kyc_documents, guide_profiles,
---   destinations, saved_destinations, trip_plans, bookings, reviews,
---   chat_threads, chat_messages, transactions, payouts, notifications, push_tokens
--- RLS: enabled on all tables
--- Triggers: handle_new_user, set_updated_at, update_guide_rating,
---           handle_booking_completed, update_chat_thread_on_message
--- RPCs: create_booking_with_thread, search_guides, guide_dashboard_stats,
---       mark_all_notifications_read
--- Realtime: chat_messages, chat_threads, notifications, bookings
--- Seed: 15 Nepal destinations
--- ============================================================================

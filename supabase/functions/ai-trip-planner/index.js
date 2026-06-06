@@ -1,6 +1,4 @@
-// ai-trip-planner/index.js
-// POST /functions/v1/ai-trip-planner
-// Generates an AI-powered Nepal trip itinerary using Claude
+
 
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { z } from "npm:zod";
@@ -52,7 +50,7 @@ Deno.serve(async (req) => {
 
   log("info", FN, "Request received", user.id, { total_days: input.total_days });
 
-  // Rate limiting: 10 plans/user/day
+  
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
 
@@ -71,7 +69,7 @@ Deno.serve(async (req) => {
     return errorResponse("RATE_LIMITED", `You can generate at most ${RATE_LIMIT_PER_DAY} trip plans per day`, 429);
   }
 
-  // Load destinations from DB
+  
   const { data: destinations, error: destErr } = await admin
     .from("destinations")
     .select("id, name, district, province, category, lat, lng, elevation_m, entry_fee_npr, short_desc, avg_visit_hrs")
@@ -82,14 +80,14 @@ Deno.serve(async (req) => {
     return errorResponse("SERVER_ERROR", "Failed to load destination data", 500);
   }
 
-  // Load user profile for personalization
+  
   const { data: profile } = await admin
     .from("profiles")
     .select("full_name, nationality, preferred_language")
     .eq("id", user.id)
     .single();
 
-  // Create trip_plan row
+  
   let tripPlanId = input.tripPlanId;
   if (!tripPlanId) {
     const { data: plan, error: planErr } = await admin
@@ -124,7 +122,7 @@ Deno.serve(async (req) => {
 
   log("info", FN, "Generating itinerary", user.id, { tripPlanId, total_days: input.total_days });
 
-  // Build Claude prompt
+  
   const langInstruction = input.lang === "ne"
     ? "Respond entirely in Nepali (Devanagari script) except for place names and JSON keys."
     : "Respond in English.";
@@ -189,7 +187,7 @@ Rules:
 Available destinations in our system (use destination_id from this list when applicable):
 ${destinationSummary}`;
 
-  // Call Claude
+  
   let itinerary;
   try {
     const anthropic = new Anthropic({
@@ -223,7 +221,7 @@ ${destinationSummary}`;
     return errorResponse("AI_ERROR", "Trip plan generation failed. Please try again.", 500);
   }
 
-  // Persist itinerary
+  
   const { error: updateErr } = await admin
     .from("trip_plans")
     .update({

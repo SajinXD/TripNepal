@@ -1,51 +1,36 @@
--- ============================================================
--- MIGRATION: 20260101000005_storage.sql
--- Trip Nepal — Storage Buckets & Policies
--- ============================================================
 
--- ============================================================
--- BUCKETS
--- ============================================================
 
--- Public bucket for user avatars
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'avatars', 'avatars', TRUE,
-  5242880,  -- 5 MB
+  5242880,  
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Public bucket for destination images (managed by admin)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'destination-images', 'destination-images', TRUE,
-  10485760,  -- 10 MB
+  10485760,  
   ARRAY['image/jpeg', 'image/png', 'image/webp']
 )
 ON CONFLICT (id) DO NOTHING;
 
--- PRIVATE bucket for KYC documents (citizenship, license, selfie)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'kyc-documents', 'kyc-documents', FALSE,
-  10485760,  -- 10 MB
+  10485760,  
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 )
 ON CONFLICT (id) DO NOTHING;
 
--- PRIVATE bucket for chat attachments
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'chat-attachments', 'chat-attachments', FALSE,
-  20971520,  -- 20 MB
+  20971520,  
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'application/pdf']
 )
 ON CONFLICT (id) DO NOTHING;
-
--- ============================================================
--- STORAGE RLS — avatars (public read, own write)
--- ============================================================
 
 CREATE POLICY "avatars_public_read"
   ON storage.objects FOR SELECT
@@ -75,10 +60,6 @@ CREATE POLICY "avatars_delete_own"
     AND (storage.foldername(name))[1] = auth.uid()::TEXT
   );
 
--- ============================================================
--- STORAGE RLS — destination-images (public read, admin write)
--- ============================================================
-
 CREATE POLICY "destination_images_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'destination-images');
@@ -99,12 +80,6 @@ CREATE POLICY "destination_images_admin_delete"
     AND public.is_admin()
   );
 
--- ============================================================
--- STORAGE RLS — kyc-documents (PRIVATE: own guide + admin only)
--- ============================================================
-
--- Guides can upload their own KYC documents
--- Path convention: kyc-documents/{user_id}/{filename}
 CREATE POLICY "kyc_docs_upload_own"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -113,7 +88,6 @@ CREATE POLICY "kyc_docs_upload_own"
     AND (storage.foldername(name))[1] = auth.uid()::TEXT
   );
 
--- Guides can read their own KYC documents; admins can read all
 CREATE POLICY "kyc_docs_read_own_or_admin"
   ON storage.objects FOR SELECT
   TO authenticated
@@ -125,7 +99,6 @@ CREATE POLICY "kyc_docs_read_own_or_admin"
     )
   );
 
--- Guides can delete/replace their own documents (for resubmission)
 CREATE POLICY "kyc_docs_delete_own"
   ON storage.objects FOR DELETE
   TO authenticated
@@ -142,12 +115,6 @@ CREATE POLICY "kyc_docs_update_own"
     AND (storage.foldername(name))[1] = auth.uid()::TEXT
   );
 
--- ============================================================
--- STORAGE RLS — chat-attachments (PRIVATE: thread participants only)
--- Path convention: chat-attachments/{thread_id}/{filename}
--- ============================================================
-
--- Upload: must be a thread participant
 CREATE POLICY "chat_attachments_upload_participant"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -160,7 +127,6 @@ CREATE POLICY "chat_attachments_upload_participant"
     )
   );
 
--- Read: must be a thread participant
 CREATE POLICY "chat_attachments_read_participant"
   ON storage.objects FOR SELECT
   TO authenticated
@@ -176,7 +142,6 @@ CREATE POLICY "chat_attachments_read_participant"
     )
   );
 
--- Admins can manage all storage
 CREATE POLICY "storage_admin_all"
   ON storage.objects FOR ALL
   TO authenticated

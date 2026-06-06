@@ -70,7 +70,7 @@ export default function GuideInbox() {
 			setThreads(tRes.data || []);
 			setPendingCount(cntRes.count || 0);
 
-			// Response rate: % of booking requests that have been acted on (not still 'requested')
+			
 			const { data: bkReqs } = await (supabase.from("bookings") as any)
 				.select("status")
 				.eq("guide_id", user.id)
@@ -89,7 +89,7 @@ export default function GuideInbox() {
 			const responseRate =
 				totalReqs > 0 ? Math.round((responded / totalReqs) * 100) : 100;
 
-			// Completion rate: completed / (accepted + in_progress + completed)
+			
 			const { data: bkAll } = await (supabase.from("bookings") as any)
 				.select("status")
 				.eq("guide_id", user.id)
@@ -215,7 +215,7 @@ export default function GuideInbox() {
 					/>
 				}
 			>
-				{/* ── Booking Requests ── */}
+				{}
 				<View className="mb-6">
 					<View className="flex-row justify-between items-center mb-3">
 						<Text className="font-semibold text-lg text-text">
@@ -299,7 +299,7 @@ export default function GuideInbox() {
 					)}
 				</View>
 
-				{/* ── Active Chats ── */}
+				{}
 				<View className="mb-6">
 					<Text className="font-semibold text-lg text-text mb-3">
 						Active Chats
@@ -376,13 +376,13 @@ export default function GuideInbox() {
 					)}
 				</View>
 
-				{/* ── Performance ── */}
+				{}
 				<View className="mb-6">
 					<Text className="font-semibold text-lg text-text mb-3">
 						Performance
 					</Text>
 					<View className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-						{/* Tappable counters */}
+						{}
 						<View className="flex-row mb-4" style={{ gap: 10 }}>
 							<TouchableOpacity
 								onPress={openTripsModal}
@@ -448,7 +448,7 @@ export default function GuideInbox() {
 				<View className="h-6" />
 			</ScrollView>
 
-			{/* Completed Trips Modal */}
+			{}
 			<Modal
 				visible={showTripsModal}
 				transparent
@@ -511,7 +511,7 @@ export default function GuideInbox() {
 				</View>
 			</Modal>
 
-			{/* Customer Reviews Modal */}
+			{}
 			<Modal
 				visible={showReviewsModal}
 				transparent

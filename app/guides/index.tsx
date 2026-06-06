@@ -25,7 +25,6 @@ type Guide = {
   is_licensed?: boolean;
 };
 
-
 const ALL_AREAS = [
   'Kathmandu', 'Pokhara', 'Chitwan', 'Bhaktapur', 'Patan (Lalitpur)',
   'Nagarkot', 'Dhulikhel', 'Bandipur', 'Solukhumbu (Everest)',
@@ -52,7 +51,7 @@ export default function FindGuideScreen() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 10;
 
-  // Filter modal state
+  
   const [showFilter, setShowFilter] = useState(false);
   const [filterNegotiable, setFilterNegotiable] = useState(false);
   const [filterLocal, setFilterLocal] = useState(false);
@@ -66,7 +65,7 @@ export default function FindGuideScreen() {
     const currentPage = reset ? 0 : page;
     if (reset) { setLoading(true); setPage(0); }
 
-    // @ts-ignore — search_guides RPC is not in generated types
+    
     const { data, error } = await (supabase.rpc as any)('search_guides', {
       p_district: null,
       p_languages: null,
@@ -80,7 +79,7 @@ export default function FindGuideScreen() {
     if (!error && data) {
       let results: Guide[] = data;
 
-      // Client-side name search filter
+      
       if (search.trim()) {
         const q = search.toLowerCase();
         results = results.filter(
@@ -91,7 +90,7 @@ export default function FindGuideScreen() {
         );
       }
 
-      // Area filter
+      
       if (filterAreas.length) {
         results = results.filter(g =>
           filterAreas.some(a =>
@@ -100,19 +99,19 @@ export default function FindGuideScreen() {
         );
       }
 
-      // Specialization filter
+      
       if (filterSpecs.length) {
         results = results.filter(g =>
           filterSpecs.some(s => g.specializations?.includes(s))
         );
       }
 
-      // Local guide filter
+      
       if (filterLocal) {
         results = results.filter(g => g.specializations?.includes('local'));
       }
 
-      // Negotiable / Licensed — secondary query for guide_profiles flags
+      
       if (filterNegotiable || filterLicensed) {
         let q = (supabase.from('guide_profiles') as any).select('id');
         if (filterNegotiable) q = q.eq('price_negotiable', true);
@@ -176,7 +175,7 @@ export default function FindGuideScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#8B1A1A" />}
       >
-        {/* Search + Filter button */}
+        {}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, height: 48 }}>
             <Search size={20} color="#717973" />
@@ -206,7 +205,7 @@ export default function FindGuideScreen() {
           </Pressable>
         </View>
 
-        {/* Header */}
+        {}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
           <Text style={{ fontWeight: '700', fontSize: 22, color: '#1A1C1E' }}>Certified Guides</Text>
           {!loading && (
@@ -214,7 +213,7 @@ export default function FindGuideScreen() {
           )}
         </View>
 
-        {/* Content */}
+        {}
         {loading ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <ActivityIndicator size="large" color="#8B1A1A" />
@@ -232,7 +231,7 @@ export default function FindGuideScreen() {
           guides.map(guide => (
             <TouchableOpacity key={guide.id} activeOpacity={0.9} onPress={() => router.push(`/guides/${guide.id}` as any)}>
             <Card className="mb-4">
-              {/* Header row */}
+              {}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <View style={{ flexDirection: 'row', flex: 1 }}>
                   <View style={{ marginRight: 12 }}>
@@ -264,7 +263,7 @@ export default function FindGuideScreen() {
                 </View>
               </View>
 
-              {/* Specialization tags */}
+              {}
               {guide.specializations?.length > 0 && (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
                   {guide.specializations.slice(0, 3).map(s => (
@@ -275,7 +274,7 @@ export default function FindGuideScreen() {
                 </View>
               )}
 
-              {/* Bio */}
+              {}
               {guide.bio_guide ? (
                 <Text style={{ fontSize: 13, color: '#717973', lineHeight: 19, marginBottom: 12 }} numberOfLines={2}>
                   {guide.bio_guide}
@@ -286,7 +285,7 @@ export default function FindGuideScreen() {
                 </Text>
               )}
 
-              {/* Districts */}
+              {}
               {guide.operating_districts?.length > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <MapPin size={12} color="#717973" />
@@ -296,7 +295,7 @@ export default function FindGuideScreen() {
                 </View>
               )}
 
-              {/* Actions */}
+              {}
               <View style={{ flexDirection: 'row' }}>
                 <Button
                   variant="primary"
@@ -319,7 +318,7 @@ export default function FindGuideScreen() {
           ))
         )}
 
-        {/* Load more */}
+        {}
         {!loading && guides.length >= PAGE_SIZE && (
           <View style={{ alignItems: 'center', marginTop: 8 }}>
             <Button variant="secondary" onPress={handleLoadMore} className="w-[200px]">
@@ -329,12 +328,12 @@ export default function FindGuideScreen() {
         )}
       </ScrollView>
 
-      {/* Filter Modal */}
+      {}
       <Modal visible={showFilter} transparent animationType="slide" onRequestClose={() => setShowFilter(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setShowFilter(false)} />
         <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' }}>
 
-          {/* Header */}
+          {}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ fontWeight: '700', fontSize: 18, color: '#1A1C1E' }}>Filter Guides</Text>
             <Pressable onPress={() => setShowFilter(false)}>
@@ -344,7 +343,7 @@ export default function FindGuideScreen() {
 
           <ScrollView showsVerticalScrollIndicator={false}>
 
-            {/* Section 1: Guide Type */}
+            {}
             <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>GUIDE TYPE</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
               {[
@@ -366,7 +365,7 @@ export default function FindGuideScreen() {
               ))}
             </View>
 
-            {/* Section 2: Areas */}
+            {}
             <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>AREAS</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
               {ALL_AREAS.map(area => {
@@ -387,7 +386,7 @@ export default function FindGuideScreen() {
               })}
             </View>
 
-            {/* Section 3: Specialization */}
+            {}
             <Text style={{ fontWeight: '700', fontSize: 12, color: '#717973', letterSpacing: 1, marginBottom: 10 }}>SPECIALIZATION</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
               {ALL_SPECS.map(spec => {
@@ -410,7 +409,7 @@ export default function FindGuideScreen() {
               })}
             </View>
 
-            {/* Clear + Apply */}
+            {}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
                 onPress={() => {

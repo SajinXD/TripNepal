@@ -1,6 +1,4 @@
-// send-push/index.js
-// POST /functions/v1/send-push
-// Sends Expo push notifications to a user's registered devices
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";

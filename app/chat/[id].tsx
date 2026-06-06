@@ -73,7 +73,7 @@ export default function ChatScreen() {
 		});
 	}
 
-	// Load thread header
+	
 	useEffect(() => {
 		if (!id || !user) return;
 		(supabase.from("chat_threads") as any)
@@ -94,7 +94,7 @@ export default function ChatScreen() {
 			.eq("is_read", false);
 	}, [id, user]);
 
-	// Load messages and subscribe
+	
 	useEffect(() => {
 		if (!id || !user) return;
 		setLoading(true);
@@ -201,7 +201,7 @@ export default function ChatScreen() {
 
 	return (
 		<SafeScreen edges={["top", "bottom"]} bg="#F7F7F4">
-			{/* Header */}
+			{}
 			<View className="px-4 py-3 flex-row justify-between items-center bg-white border-b border-border">
 				<View className="flex-row items-center flex-1">
 					<TouchableOpacity
@@ -322,7 +322,7 @@ export default function ChatScreen() {
 					<View className="h-4" />
 				</ScrollView>
 
-				{/* Input */}
+				{}
 				<View className="px-4 py-3 bg-white border-t border-border flex-row items-center">
 					<TouchableOpacity
 						onPress={sendImage}

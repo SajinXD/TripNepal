@@ -1,6 +1,4 @@
-// payout-process/index.js
-// POST /functions/v1/payout-process  [ADMIN ONLY]
-// Releases escrow funds to guide on trip completion
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";

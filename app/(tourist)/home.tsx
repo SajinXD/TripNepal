@@ -10,7 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/hooks/useAuth';
 
-// Category-appropriate fallback images
 const FALLBACK_IMAGES: Record<string, string> = {
   trekking:    'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800',
   cultural:    'https://images.unsplash.com/photo-1582654291374-c8bcf56e7e21?w=800',
@@ -59,7 +58,7 @@ export default function HomeScreen() {
   async function loadData() {
     setRefreshing(true);
 
-    // Load destinations — use cover_image_url (correct DB column)
+    
     const { data, error } = await supabase
       .from('destinations')
       .select('id, name, district, cover_image_url, category, difficulty_level, estimated_cost_npr, is_featured, description')
@@ -72,13 +71,13 @@ export default function HomeScreen() {
       setDestinations(data.filter((d: any) => d.id !== featuredDest?.id));
     }
 
-    // Guide count
+    
     const { count: gCount } = await (supabase.from('guide_profiles') as any)
       .select('id', { count: 'exact', head: true })
       .eq('is_verified', true);
     if (gCount) setGuideCount(gCount);
 
-    // Lodge count — query stays table if it exists, else destinations count
+    
     try {
       const { count: lCount, error: lErr } = await (supabase.from('stays') as any)
         .select('id', { count: 'exact', head: true })
@@ -99,7 +98,7 @@ export default function HomeScreen() {
       if (dCount !== null) setLodgeCount(dCount);
     }
 
-    // FX rate
+    
     try {
       const key = process.env.EXPO_PUBLIC_EXCHANGE_RATE_API_KEY;
       const url = key
@@ -113,7 +112,7 @@ export default function HomeScreen() {
         setLastUpdated(new Date().toLocaleDateString());
       }
     } catch {
-      // silently fail
+      
     }
 
     setRefreshing(false);
@@ -142,7 +141,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* Featured Trek Hero */}
+        {}
         {featured && (
           <View className="px-5 mb-5">
             <TouchableOpacity
@@ -169,11 +168,11 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* 3 Quick Access Cards */}
+        {}
         <View className="px-5 mb-8">
           <View className="flex-row">
 
-            {/* Currency Converter */}
+            {}
             <TouchableOpacity
               activeOpacity={0.8}
               style={{ flex: 1, marginRight: 6 }}
@@ -198,7 +197,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Guides */}
+            {}
             <TouchableOpacity
               activeOpacity={0.8}
               style={{ flex: 1, marginRight: 6 }}
@@ -217,7 +216,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Lodges */}
+            {}
             <TouchableOpacity
               activeOpacity={0.8}
               style={{ flex: 1 }}
@@ -237,7 +236,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Popular Destinations */}
+        {}
         <View className="px-5 flex-row justify-between items-end mb-4">
           <Text className="font-displaySemiBold text-[20px] text-on-surface">Popular Destinations</Text>
           <TouchableOpacity onPress={() => router.push('/(tourist)/explore' as any)}>
@@ -294,7 +293,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Personalized For You */}
+        {}
         <View className="px-5 mb-8">
           <View className="flex-row justify-between items-end mb-4">
             <Text className="font-displaySemiBold text-[20px] text-on-surface">For You</Text>

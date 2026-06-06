@@ -15,7 +15,7 @@ export default function BookingConfirmScreen() {
 
   useEffect(() => {
     if (!bookingId) { setLoading(false); return; }
-    // @ts-ignore
+    
     (supabase.from('bookings') as any)
       .select('id, status, start_date, end_date, total_days, total_amount_npr, guide_id, tourist_id, guide_profiles(profiles(full_name))')
       .eq('id', bookingId)

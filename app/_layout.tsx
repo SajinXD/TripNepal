@@ -1,5 +1,5 @@
-// app/_layout.tsx
-// Root layout for the entire app.
+
+
 import 'react-native-url-polyfill/auto';
 import '../global.css';
 
@@ -16,7 +16,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useThemeStore } from '@/stores/themeStore';
 
-// Syncs Zustand themeStore → NativeWind color scheme on every toggle
 function ThemeSync() {
   const { isDark, loadTheme } = useThemeStore();
   const { setColorScheme } = useColorScheme();
@@ -33,7 +32,7 @@ export default function RootLayout() {
   const router = useRouter();
   const { isDark } = useThemeStore();
   
-  // Register and initialize push notifications
+  
   usePushNotifications();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -45,14 +44,14 @@ export default function RootLayout() {
     PlusJakartaSans_700Bold,
   });
 
-  // Hide splash screen when fonts are loaded
+  
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // Handle Authentication Routing
+  
   useEffect(() => {
     if (isLoading || !fontsLoaded) return;
 
@@ -76,8 +75,8 @@ export default function RootLayout() {
         router.replace('/(tourist)/home');
       }
     } else if (user && !profile) {
-      // Logged in but profile still null after loading (DB trigger may have failed).
-      // Use role from auth metadata to route — prevents user being stuck on login screen.
+      
+      
       if (inAuthGroup || isWelcome) {
         const metaRole = user.user_metadata?.role;
         router.replace(metaRole === 'guide' ? '/(guide)/dashboard' : '/(tourist)/home');

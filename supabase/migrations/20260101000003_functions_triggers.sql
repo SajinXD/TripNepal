@@ -1,11 +1,4 @@
--- ============================================================
--- MIGRATION: 20260101000003_functions_triggers.sql
--- Trip Nepal — Postgres Functions, Triggers, and RPCs
--- ============================================================
 
--- ============================================================
--- TRIGGER: auto-create profile after signup
--- ============================================================
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -21,7 +14,7 @@ BEGIN
   )
   ON CONFLICT (id) DO NOTHING;
 
-  -- If registering as guide, also create guide_profile row
+  
   IF (NEW.raw_user_meta_data->>'role') = 'guide' THEN
     INSERT INTO public.guide_profiles (id)
     VALUES (NEW.id)
@@ -40,10 +33,6 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- ============================================================
--- TRIGGER: update `updated_at` automatically
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -54,7 +43,6 @@ BEGIN
 END;
 $$;
 
--- Apply to all relevant tables
 CREATE OR REPLACE TRIGGER trg_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
@@ -87,10 +75,6 @@ CREATE OR REPLACE TRIGGER trg_chat_threads_updated_at
   BEFORE UPDATE ON public.chat_threads
   FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
 
--- ============================================================
--- TRIGGER: update guide rating after new review
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.update_guide_rating()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER
@@ -112,10 +96,6 @@ CREATE OR REPLACE TRIGGER trg_update_guide_rating
   WHEN (NEW.is_guide_review = TRUE)
   EXECUTE PROCEDURE public.update_guide_rating();
 
--- ============================================================
--- TRIGGER: increment guide total_trips on booking completion
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.handle_booking_completed()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER
@@ -133,10 +113,6 @@ $$;
 CREATE OR REPLACE TRIGGER trg_booking_completed
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE PROCEDURE public.handle_booking_completed();
-
--- ============================================================
--- TRIGGER: update chat thread summary after new message
--- ============================================================
 
 CREATE OR REPLACE FUNCTION public.update_chat_thread_on_message()
 RETURNS TRIGGER
@@ -169,11 +145,6 @@ CREATE OR REPLACE TRIGGER trg_chat_message_inserted
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW EXECUTE PROCEDURE public.update_chat_thread_on_message();
 
--- ============================================================
--- RPC: create_booking_with_thread
--- Atomically creates a booking + chat thread
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.create_booking_with_thread(
   p_tourist_id        UUID,
   p_guide_id          UUID,
@@ -197,7 +168,7 @@ DECLARE
   v_booking_id UUID;
   v_thread_id  UUID;
 BEGIN
-  -- Check guide is verified + online
+  
   IF NOT EXISTS (
     SELECT 1 FROM public.guide_profiles
     WHERE id = p_guide_id AND is_verified = TRUE AND is_online = TRUE
@@ -205,7 +176,7 @@ BEGIN
     RAISE EXCEPTION 'GUIDE_NOT_AVAILABLE' USING HINT = 'Guide is not verified or not online';
   END IF;
 
-  -- Check for date conflicts (guide already booked)
+  
   IF EXISTS (
     SELECT 1 FROM public.bookings
     WHERE guide_id = p_guide_id
@@ -215,7 +186,7 @@ BEGIN
     RAISE EXCEPTION 'GUIDE_ALREADY_BOOKED' USING HINT = 'Guide is already booked for these dates';
   END IF;
 
-  -- Insert booking
+  
   INSERT INTO public.bookings (
     tourist_id, guide_id, trip_plan_id,
     start_date, end_date, start_time,
@@ -232,7 +203,7 @@ BEGIN
   )
   RETURNING id INTO v_booking_id;
 
-  -- Insert chat thread
+  
   INSERT INTO public.chat_threads (booking_id, tourist_id, guide_id)
   VALUES (v_booking_id, p_tourist_id, p_guide_id)
   RETURNING id INTO v_thread_id;
@@ -243,10 +214,6 @@ BEGIN
   );
 END;
 $$;
-
--- ============================================================
--- RPC: search_guides
--- ============================================================
 
 CREATE OR REPLACE FUNCTION public.search_guides(
   p_district    TEXT        DEFAULT NULL,
@@ -297,7 +264,7 @@ BEGIN
     gp.years_of_experience as years_experience,
     gp.current_lat,
     gp.current_lng,
-    -- Haversine distance in km (approximation using earth radius 6371)
+    
     CASE
       WHEN p_lat IS NOT NULL AND p_lng IS NOT NULL AND gp.current_lat IS NOT NULL AND gp.current_lng IS NOT NULL
       THEN (
@@ -314,15 +281,15 @@ BEGIN
   WHERE
     gp.is_verified = TRUE
     AND gp.is_online = TRUE
-    -- District filter
+    
     AND (p_district IS NULL OR p_district = ANY(gp.service_areas))
-    -- Language filter
+    
     AND (p_languages IS NULL OR gp.languages_spoken && p_languages)
-    -- Max price filter
+    
     AND (p_max_price IS NULL OR gp.price_per_day <= p_max_price)
-    -- Category filter
+    
     AND (p_categories IS NULL OR gp.specializations && p_categories)
-    -- Radius filter (haversine)
+    
     AND (
       p_lat IS NULL OR p_lng IS NULL OR gp.current_lat IS NULL OR gp.current_lng IS NULL
       OR (
@@ -339,10 +306,6 @@ BEGIN
     gp.total_trips_completed DESC;
 END;
 $$;
-
--- ============================================================
--- RPC: nearby_destinations (haversine)
--- ============================================================
 
 CREATE OR REPLACE FUNCTION public.nearby_destinations(
   p_lat       FLOAT,
@@ -395,10 +358,6 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- RPC: guide_dashboard_stats
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.guide_dashboard_stats(p_guide_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -411,7 +370,7 @@ DECLARE
   v_avg_rating        NUMERIC(3,2);
   v_total_reviews     INTEGER;
 BEGIN
-  -- Today's earnings (released transactions)
+  
   SELECT COALESCE(SUM(t.amount_npr), 0)
   INTO v_today_earnings
   FROM public.transactions t
@@ -420,7 +379,7 @@ BEGIN
     AND t.status = 'released'
     AND t.completed_at::DATE = CURRENT_DATE;
 
-  -- This week's earnings
+  
   SELECT COALESCE(SUM(t.amount_npr), 0)
   INTO v_week_earnings
   FROM public.transactions t
@@ -429,19 +388,19 @@ BEGIN
     AND t.status = 'released'
     AND t.completed_at >= date_trunc('week', NOW());
 
-  -- Pending booking requests
+  
   SELECT COUNT(*)
   INTO v_pending_requests
   FROM public.bookings
   WHERE guide_id = p_guide_id AND status = 'requested';
 
-  -- Completed trips count
+  
   SELECT COALESCE(total_trips_completed, 0)
   INTO v_completed_trips
   FROM public.guide_profiles
   WHERE id = p_guide_id;
 
-  -- Average rating
+  
   SELECT COALESCE(AVG(rating)::NUMERIC(3,2), 0), COUNT(*)
   INTO v_avg_rating, v_total_reviews
   FROM public.reviews
@@ -457,11 +416,6 @@ BEGIN
   );
 END;
 $$;
-
--- ============================================================
--- RPC: complete_booking_and_release_payout
--- (called by admin/system after trip ends)
--- ============================================================
 
 CREATE OR REPLACE FUNCTION public.complete_booking_and_release_payout(
   p_booking_id UUID
@@ -483,18 +437,18 @@ BEGIN
     RAISE EXCEPTION 'BOOKING_NOT_ACCEPTED' USING HINT = 'Booking must be accepted before completion';
   END IF;
 
-  -- Mark booking complete
+  
   UPDATE public.bookings
   SET status = 'completed', completed_at = NOW()
   WHERE id = p_booking_id;
 
-  -- Release held transaction
+  
   UPDATE public.transactions
   SET status = 'released', completed_at = NOW()
   WHERE booking_id = p_booking_id AND status = 'held'
   RETURNING id INTO v_txn_id;
 
-  -- Create payout record
+  
   IF v_txn_id IS NOT NULL THEN
     INSERT INTO public.payouts (guide_id, transaction_id, amount_npr)
     SELECT b.guide_id, v_txn_id, b.subtotal_npr

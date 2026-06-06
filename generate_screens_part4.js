@@ -8,7 +8,6 @@ const writeIfDifferent = (filePath, content) => {
   console.log('Wrote screen:', filePath);
 };
 
-// 8. Find a Guide
 writeIfDifferent(path.join(__dirname, 'app/guides/index.tsx'), `import React from 'react';
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
 import { Search, MapPin, MessageSquare, Phone, Plus } from 'lucide-react-native';
@@ -113,7 +112,6 @@ export default function FindGuideScreen() {
 }
 `);
 
-// 9. Guide Dashboard
 writeIfDifferent(path.join(__dirname, 'app/(guide)/dashboard.tsx'), `import React from 'react';
 import { View, Text, ScrollView, ImageBackground, Pressable } from 'react-native';
 import { Star, Calendar as CalendarIcon, MessageSquare, CloudRain } from 'lucide-react-native';
@@ -245,7 +243,6 @@ export default function GuideDashboardScreen() {
 }
 `);
 
-// 10. Stays / Find Lodge
 writeIfDifferent(path.join(__dirname, 'app/stays/index.tsx'), `import React from 'react';
 import { View, Text, ScrollView, ImageBackground, Pressable, TextInput } from 'react-native';
 import { Search, Heart, Wifi, Coffee, Flame } from 'lucide-react-native';

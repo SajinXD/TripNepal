@@ -1,23 +1,8 @@
--- ============================================================================
--- Trip Nepal — Supabase Database Schema
--- Run this in Supabase SQL Editor (or as migration: 001_initial_schema.sql)
--- ============================================================================
--- Features supported:
---   • Tourist + Guide roles (Pathao/inDrive-style two-sided marketplace)
---   • KYC verification flow for guides
---   • AI-generated trip plans
---   • Bookings, payments, reviews, real-time chat
---   • Destination catalog
--- ============================================================================
 
--- Enable required extensions
+
 create extension if not exists "uuid-ossp";
-create extension if not exists postgis;          -- For lat/lng / nearby queries
-create extension if not exists pg_trgm;          -- For fuzzy search on destinations
-
--- ============================================================================
--- 1. ENUMS
--- ============================================================================
+create extension if not exists postgis;          
+create extension if not exists pg_trgm;          
 
 create type user_role as enum ('tourist', 'guide', 'admin');
 create type kyc_status as enum ('not_submitted', 'pending', 'approved', 'rejected', 'resubmit');
@@ -25,10 +10,6 @@ create type booking_status as enum ('requested', 'accepted', 'rejected', 'in_pro
 create type payment_status as enum ('pending', 'held', 'released', 'refunded', 'failed');
 create type trip_category as enum ('trekking', 'cultural', 'adventure', 'wildlife', 'spiritual', 'sightseeing', 'food', 'photography');
 create type document_type as enum ('citizenship', 'passport', 'driving_license', 'guide_license', 'selfie');
-
--- ============================================================================
--- 2. PROFILES (extends auth.users)
--- ============================================================================
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -40,7 +21,7 @@ create table public.profiles (
   date_of_birth date,
   gender text check (gender in ('male', 'female', 'other', 'prefer_not_to_say')),
   preferred_language text default 'en' check (preferred_language in ('en', 'ne')),
-  country text,                                  -- For tourists: home country
+  country text,                                  
   bio text,
   is_active boolean default true,
   created_at timestamptz default now(),
@@ -50,22 +31,18 @@ create table public.profiles (
 create index idx_profiles_role on public.profiles(role);
 create index idx_profiles_phone on public.profiles(phone);
 
--- ============================================================================
--- 3. KYC VERIFICATIONS (for guides)
--- ============================================================================
-
 create table public.kyc_verifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   status kyc_status not null default 'not_submitted',
-  -- Personal info
+  
   full_name_legal text not null,
   citizenship_number text,
   passport_number text,
   date_of_birth date not null,
   permanent_address text not null,
   current_address text,
-  -- Submission metadata
+  
   submitted_at timestamptz,
   reviewed_at timestamptz,
   reviewed_by uuid references public.profiles(id),
@@ -79,12 +56,11 @@ create table public.kyc_verifications (
 create index idx_kyc_status on public.kyc_verifications(status);
 create index idx_kyc_user on public.kyc_verifications(user_id);
 
--- KYC documents (citizenship front/back, selfie, license, etc.)
 create table public.kyc_documents (
   id uuid primary key default gen_random_uuid(),
   kyc_id uuid not null references public.kyc_verifications(id) on delete cascade,
   document_type document_type not null,
-  file_url text not null,                        -- Supabase Storage URL
+  file_url text not null,                        
   file_size_bytes int,
   mime_type text,
   uploaded_at timestamptz default now()
@@ -92,39 +68,35 @@ create table public.kyc_documents (
 
 create index idx_kyc_docs_kyc on public.kyc_documents(kyc_id);
 
--- ============================================================================
--- 4. GUIDE PROFILES (guide-specific details)
--- ============================================================================
-
 create table public.guide_profiles (
   id uuid primary key references public.profiles(id) on delete cascade,
-  -- Professional info
+  
   years_of_experience int default 0,
-  guide_license_number text unique,              -- Nepal Tourism Board license
+  guide_license_number text unique,              
   license_expiry_date date,
-  -- Service offering
-  bio_long text,                                 -- Detailed bio shown on guide page
-  languages_spoken text[] default '{english}',   -- ['english','nepali','hindi','chinese']
+  
+  bio_long text,                                 
+  languages_spoken text[] default '{english}',   
   specializations trip_category[] default '{sightseeing}',
-  service_areas text[] default '{}',             -- Districts: ['kathmandu','pokhara']
-  -- Pricing (NPR)
+  service_areas text[] default '{}',             
+  
   price_per_hour numeric(10,2),
   price_per_day numeric(10,2),
-  price_per_trek_day numeric(10,2),              -- For multi-day treks
+  price_per_trek_day numeric(10,2),              
   min_booking_hours int default 2,
-  -- Availability
-  is_online boolean default false,               -- Currently accepting requests
-  is_verified boolean default false,             -- KYC approved
-  current_lat double precision,                  -- Live location when online
+  
+  is_online boolean default false,               
+  is_verified boolean default false,             
+  current_lat double precision,                  
   current_lng double precision,
   last_location_update timestamptz,
-  -- Stats
+  
   total_trips_completed int default 0,
   average_rating numeric(3,2) default 0,
   total_reviews int default 0,
   total_earnings numeric(12,2) default 0,
-  response_time_minutes int,                     -- Average response time
-  acceptance_rate numeric(5,2),                  -- % of requests accepted
+  response_time_minutes int,                     
+  acceptance_rate numeric(5,2),                  
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -135,32 +107,28 @@ create index idx_guide_areas on public.guide_profiles using gin(service_areas);
 create index idx_guide_languages on public.guide_profiles using gin(languages_spoken);
 create index idx_guide_location on public.guide_profiles(current_lat, current_lng);
 
--- ============================================================================
--- 5. DESTINATIONS (catalog of tourist places)
--- ============================================================================
-
 create table public.destinations (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text unique not null,
   description text,
   short_description text,
-  district text not null,                        -- Nepal district
+  district text not null,                        
   province text,
   category trip_category[] default '{sightseeing}',
-  -- Location
+  
   latitude double precision not null,
   longitude double precision not null,
   altitude_m int,
-  -- Media
+  
   cover_image_url text,
   gallery_urls text[],
-  -- Practical info
-  best_season text[],                            -- ['spring','autumn']
+  
+  best_season text[],                            
   difficulty_level text check (difficulty_level in ('easy','moderate','hard','expert')),
   estimated_duration_hours int,
   entry_fee_npr numeric(10,2),
-  -- SEO/Search
+  
   tags text[],
   is_featured boolean default false,
   is_active boolean default true,
@@ -176,7 +144,6 @@ create index idx_dest_tags on public.destinations using gin(tags);
 create index idx_dest_search on public.destinations using gin(name gin_trgm_ops);
 create index idx_dest_location on public.destinations(latitude, longitude);
 
--- User's saved/favorite destinations
 create table public.saved_destinations (
   user_id uuid references public.profiles(id) on delete cascade,
   destination_id uuid references public.destinations(id) on delete cascade,
@@ -184,15 +151,11 @@ create table public.saved_destinations (
   primary key (user_id, destination_id)
 );
 
--- ============================================================================
--- 6. AI TRIP PLANS
--- ============================================================================
-
 create table public.trip_plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   title text not null,
-  -- User input
+  
   start_date date,
   end_date date,
   total_days int not null,
@@ -200,17 +163,17 @@ create table public.trip_plans (
   travelers_count int default 1,
   trip_categories trip_category[] default '{sightseeing}',
   preferred_districts text[],
-  special_requests text,                         -- Free text "I want to see Everest..."
-  -- AI output (structured itinerary)
-  itinerary jsonb not null default '[]',         -- [{day:1,stops:[...],meals:[...],stay:...}]
+  special_requests text,                         
+  
+  itinerary jsonb not null default '[]',         
   estimated_total_cost_npr numeric(12,2),
   ai_model text default 'claude-3-5-sonnet',
   ai_generated_at timestamptz default now(),
-  -- Status
+  
   is_saved boolean default true,
   is_shared boolean default false,
-  share_token text unique,                       -- For shareable link
-  -- Optional: linked booking
+  share_token text unique,                       
+  
   booked_guide_id uuid references public.guide_profiles(id),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -219,16 +182,12 @@ create table public.trip_plans (
 create index idx_trip_plans_user on public.trip_plans(user_id);
 create index idx_trip_plans_share on public.trip_plans(share_token) where share_token is not null;
 
--- ============================================================================
--- 7. BOOKINGS (Tourist books a Guide)
--- ============================================================================
-
 create table public.bookings (
   id uuid primary key default gen_random_uuid(),
-  -- Parties
+  
   tourist_id uuid not null references public.profiles(id) on delete restrict,
   guide_id uuid not null references public.guide_profiles(id) on delete restrict,
-  -- Trip details
+  
   trip_plan_id uuid references public.trip_plans(id),
   start_date date not null,
   end_date date not null,
@@ -236,18 +195,18 @@ create table public.bookings (
   pickup_location text,
   pickup_lat double precision,
   pickup_lng double precision,
-  destinations uuid[],                           -- Array of destination IDs
+  destinations uuid[],                           
   travelers_count int default 1,
   special_notes text,
-  -- Pricing
+  
   hourly_rate_npr numeric(10,2),
   daily_rate_npr numeric(10,2),
   total_hours numeric(6,2),
   total_days int,
   subtotal_npr numeric(12,2) not null,
-  service_fee_npr numeric(10,2) default 0,       -- Platform fee
+  service_fee_npr numeric(10,2) default 0,       
   total_amount_npr numeric(12,2) not null,
-  -- Status
+  
   status booking_status not null default 'requested',
   requested_at timestamptz default now(),
   responded_at timestamptz,
@@ -256,9 +215,9 @@ create table public.bookings (
   cancelled_at timestamptz,
   cancellation_reason text,
   cancelled_by uuid references public.profiles(id),
-  -- Payment
+  
   payment_status payment_status default 'pending',
-  payment_method text,                           -- 'esewa','khalti','imepay','cash','card'
+  payment_method text,                           
   payment_transaction_id text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -269,10 +228,6 @@ create index idx_bookings_guide on public.bookings(guide_id);
 create index idx_bookings_status on public.bookings(status);
 create index idx_bookings_dates on public.bookings(start_date, end_date);
 
--- ============================================================================
--- 8. REVIEWS (Tourist rates Guide & vice versa)
--- ============================================================================
-
 create table public.reviews (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid not null references public.bookings(id) on delete cascade,
@@ -280,7 +235,7 @@ create table public.reviews (
   reviewee_id uuid not null references public.profiles(id) on delete cascade,
   rating int not null check (rating between 1 and 5),
   comment text,
-  -- Granular ratings (only when reviewing a guide)
+  
   punctuality_rating int check (punctuality_rating between 1 and 5),
   knowledge_rating int check (knowledge_rating between 1 and 5),
   friendliness_rating int check (friendliness_rating between 1 and 5),
@@ -292,10 +247,6 @@ create table public.reviews (
 
 create index idx_reviews_reviewee on public.reviews(reviewee_id);
 create index idx_reviews_booking on public.reviews(booking_id);
-
--- ============================================================================
--- 9. CHAT MESSAGES (Real-time tourist <-> guide)
--- ============================================================================
 
 create table public.chat_threads (
   id uuid primary key default gen_random_uuid(),
@@ -322,10 +273,6 @@ create table public.chat_messages (
 
 create index idx_chat_messages_thread on public.chat_messages(thread_id, created_at desc);
 
--- ============================================================================
--- 10. PAYMENTS / TRANSACTIONS
--- ============================================================================
-
 create table public.transactions (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid references public.bookings(id) on delete set null,
@@ -333,7 +280,7 @@ create table public.transactions (
   amount_npr numeric(12,2) not null,
   type text not null check (type in ('payment','refund','payout','platform_fee')),
   status payment_status not null default 'pending',
-  gateway text,                                  -- 'esewa','khalti','imepay','stripe'
+  gateway text,                                  
   gateway_transaction_id text,
   gateway_response jsonb,
   created_at timestamptz default now(),
@@ -343,17 +290,13 @@ create table public.transactions (
 create index idx_txn_booking on public.transactions(booking_id);
 create index idx_txn_user on public.transactions(user_id);
 
--- ============================================================================
--- 11. NOTIFICATIONS
--- ============================================================================
-
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   title text not null,
   body text not null,
-  type text,                                     -- 'booking_request','booking_accepted','message',...
-  data jsonb,                                    -- Deep link payload
+  type text,                                     
+  data jsonb,                                    
   is_read boolean default false,
   created_at timestamptz default now()
 );
@@ -361,20 +304,14 @@ create table public.notifications (
 create index idx_notif_user on public.notifications(user_id, created_at desc);
 create index idx_notif_unread on public.notifications(user_id) where is_read = false;
 
--- Push tokens for Expo notifications
 create table public.push_tokens (
   user_id uuid references public.profiles(id) on delete cascade,
   token text not null,
-  device_type text,                              -- 'ios','android'
+  device_type text,                              
   created_at timestamptz default now(),
   primary key (user_id, token)
 );
 
--- ============================================================================
--- 12. TRIGGERS — Auto-create profile on signup, update timestamps, recalc ratings
--- ============================================================================
-
--- Auto-create profile when a new auth user signs up
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -396,7 +333,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Generic updated_at handler
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -412,7 +348,6 @@ create trigger set_updated_at_dest before update on public.destinations for each
 create trigger set_updated_at_trip before update on public.trip_plans for each row execute function public.set_updated_at();
 create trigger set_updated_at_booking before update on public.bookings for each row execute function public.set_updated_at();
 
--- Recalculate guide rating after a review
 create or replace function public.recalc_guide_rating()
 returns trigger language plpgsql as $$
 declare
@@ -439,10 +374,6 @@ create trigger recalc_guide_rating_trg
   after insert or update or delete on public.reviews
   for each row execute function public.recalc_guide_rating();
 
--- ============================================================================
--- 13. ROW LEVEL SECURITY (RLS)
--- ============================================================================
-
 alter table public.profiles enable row level security;
 alter table public.kyc_verifications enable row level security;
 alter table public.kyc_documents enable row level security;
@@ -458,11 +389,9 @@ alter table public.transactions enable row level security;
 alter table public.notifications enable row level security;
 alter table public.push_tokens enable row level security;
 
--- PROFILES
 create policy "Profiles are viewable by everyone"   on public.profiles for select using (true);
 create policy "Users can update own profile"        on public.profiles for update using (auth.uid() = id);
 
--- KYC
 create policy "Users view own KYC"                  on public.kyc_verifications for select using (auth.uid() = user_id);
 create policy "Users insert own KYC"                on public.kyc_verifications for insert with check (auth.uid() = user_id);
 create policy "Users update own KYC"                on public.kyc_verifications for update using (auth.uid() = user_id);
@@ -471,34 +400,27 @@ create policy "Users view own KYC docs"             on public.kyc_documents for 
 create policy "Users insert own KYC docs"           on public.kyc_documents for insert
   with check (exists (select 1 from public.kyc_verifications where id = kyc_id and user_id = auth.uid()));
 
--- GUIDE PROFILES
 create policy "Verified guides visible to all"      on public.guide_profiles for select using (is_verified = true or auth.uid() = id);
 create policy "Guides update own profile"           on public.guide_profiles for update using (auth.uid() = id);
 create policy "Guides insert own profile"           on public.guide_profiles for insert with check (auth.uid() = id);
 
--- DESTINATIONS — public read
 create policy "Destinations viewable by all"        on public.destinations for select using (is_active = true);
 
--- SAVED DESTINATIONS
 create policy "Users manage own favorites"          on public.saved_destinations for all using (auth.uid() = user_id);
 
--- TRIP PLANS
 create policy "Users view own trip plans"           on public.trip_plans for select
   using (auth.uid() = user_id or is_shared = true);
 create policy "Users manage own trip plans"         on public.trip_plans for all using (auth.uid() = user_id);
 
--- BOOKINGS — only the parties involved
 create policy "Booking parties can view"            on public.bookings for select
   using (auth.uid() = tourist_id or auth.uid() = guide_id);
 create policy "Tourists create bookings"            on public.bookings for insert with check (auth.uid() = tourist_id);
 create policy "Parties can update bookings"         on public.bookings for update
   using (auth.uid() = tourist_id or auth.uid() = guide_id);
 
--- REVIEWS
 create policy "Reviews publicly viewable"           on public.reviews for select using (is_visible = true);
 create policy "Users review own bookings"           on public.reviews for insert with check (auth.uid() = reviewer_id);
 
--- CHAT
 create policy "Chat threads visible to parties"     on public.chat_threads for select
   using (auth.uid() = tourist_id or auth.uid() = guide_id);
 create policy "Messages visible in own threads"     on public.chat_messages for select
@@ -509,29 +431,12 @@ create policy "Send messages in own threads"        on public.chat_messages for 
   )
 );
 
--- TRANSACTIONS — user sees only own
 create policy "Users view own transactions"         on public.transactions for select using (auth.uid() = user_id);
 
--- NOTIFICATIONS
 create policy "Users view own notifications"       on public.notifications for select using (auth.uid() = user_id);
 create policy "Users update own notifications"     on public.notifications for update using (auth.uid() = user_id);
 
--- PUSH TOKENS
 create policy "Users manage own push tokens"        on public.push_tokens for all using (auth.uid() = user_id);
-
--- ============================================================================
--- 14. STORAGE BUCKETS (run in Storage section or via SQL)
--- ============================================================================
--- Create these buckets in Supabase dashboard:
---   • avatars              — public
---   • destination-images   — public
---   • kyc-documents        — PRIVATE (only owner + admin)
---   • chat-attachments     — PRIVATE (only thread participants)
--- ============================================================================
-
--- ============================================================================
--- 15. SEED DATA — sample destinations
--- ============================================================================
 
 insert into public.destinations (name, slug, description, district, province, category, latitude, longitude, altitude_m, difficulty_level, is_featured, tags) values
 ('Pashupatinath Temple', 'pashupatinath-temple', 'Sacred Hindu temple complex on the banks of the Bagmati River, UNESCO World Heritage Site.', 'Kathmandu', 'Bagmati', '{spiritual,cultural}', 27.7106, 85.3487, 1400, 'easy', true, '{unesco,hindu,heritage}'),
@@ -543,6 +448,3 @@ insert into public.destinations (name, slug, description, district, province, ca
 ('Annapurna Circuit', 'annapurna-circuit', 'Classic high-altitude trek through diverse landscapes.', 'Manang', 'Gandaki', '{trekking,adventure}', 28.6667, 84.0167, 5416, 'hard', true, '{annapurna,thorong-la,trek}'),
 ('Bhaktapur Durbar Square', 'bhaktapur-durbar-square', 'Medieval city of artisans, UNESCO World Heritage Site.', 'Bhaktapur', 'Bagmati', '{cultural,sightseeing}', 27.6710, 85.4298, 1401, 'easy', true, '{unesco,heritage,newari}');
 
--- ============================================================================
--- DONE — Schema is ready for Trip Nepal
--- ============================================================================

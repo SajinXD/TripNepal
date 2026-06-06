@@ -1,4 +1,4 @@
-// src/constants/theme.ts
+
 export const colors = {
   primary: '#8B1A1A',
   primaryDark: '#5C0F0F',
@@ -69,7 +69,6 @@ export const fonts = {
   bodyBold: 'Inter_700Bold',
 };
 
-// Brand-tinted shadow utility — define this once and reuse:
 export const cardShadow = {
   shadowColor: '#8B1A1A',
   shadowOffset: { width: 0, height: 4 },

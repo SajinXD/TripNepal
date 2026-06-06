@@ -1,6 +1,4 @@
-// booking-create/index.js
-// POST /functions/v1/booking-create
-// Tourist creates a booking request for a guide
+
 
 import { z } from "npm:zod";
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";
@@ -104,7 +102,7 @@ Deno.serve(async (req) => {
 
   const { booking_id, thread_id } = result;
 
-  // Push-notify the guide
+  
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

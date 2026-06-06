@@ -1,6 +1,4 @@
-// payment-webhook-esewa/index.js
-// POST|GET /functions/v1/payment-webhook-esewa
-// Handles eSewa payment callback and HMAC verification
+
 
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";
 import { log } from "../_shared/auth.js";

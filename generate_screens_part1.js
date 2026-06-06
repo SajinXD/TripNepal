@@ -8,7 +8,6 @@ const writeIfDifferent = (filePath, content) => {
   console.log('Wrote screen:', filePath);
 };
 
-// 1. Welcome Screen
 writeIfDifferent(path.join(__dirname, 'app/welcome.tsx'), `import React from 'react';
 import { View, Text, ImageBackground, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -90,7 +89,6 @@ export default function WelcomeScreen() {
 }
 `);
 
-// 2. Login Screen
 writeIfDifferent(path.join(__dirname, 'app/(auth)/login.tsx'), `import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { Mail, Lock, Check } from 'lucide-react-native';

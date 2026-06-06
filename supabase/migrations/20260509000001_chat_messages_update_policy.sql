@@ -1,4 +1,4 @@
--- Allow participants in a thread to mark messages as read
+
 CREATE POLICY "Mark messages read in own threads"
   ON public.chat_messages FOR UPDATE
   TO authenticated
@@ -17,7 +17,6 @@ CREATE POLICY "Mark messages read in own threads"
     )
   );
 
--- Allow guides to insert into chat_threads (needed when guide accepts a request)
 CREATE POLICY "Guide can create chat thread"
   ON public.chat_threads FOR INSERT
   TO authenticated

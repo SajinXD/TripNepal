@@ -1,6 +1,4 @@
-// payment-webhook-khalti/index.js
-// POST /functions/v1/payment-webhook-khalti
-// Handles Khalti payment verification webhook
+
 
 import { corsPreflightResponse, okResponse, errorResponse } from "../_shared/cors.js";
 import { log } from "../_shared/auth.js";

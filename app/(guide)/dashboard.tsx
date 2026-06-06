@@ -87,7 +87,7 @@ export default function GuideDashboardScreen() {
 
 	const loadBookings = useCallback(async () => {
 		if (!user) return;
-		// @ts-ignore
+		
 		const { data } = await (supabase.from("bookings") as any)
 			.select("*, tourist:profiles!tourist_id(full_name, avatar_url)")
 			.eq("guide_id", user.id)
@@ -119,7 +119,7 @@ export default function GuideDashboardScreen() {
 		setRespondingId(bookingId);
 		try {
 			const newStatus = accept ? "accepted" : "rejected";
-			// @ts-ignore
+			
 			const { error } = await (supabase.from("bookings") as any)
 				.update({ status: newStatus })
 				.eq("id", bookingId);
@@ -163,7 +163,7 @@ export default function GuideDashboardScreen() {
 					/>
 				}
 			>
-				{/* Hero */}
+				{}
 				<View className="bg-primary rounded-[16px] p-5 mb-5">
 					<Text className="font-displayBold text-[24px] text-white mb-1">
 						Namaste, {firstName}
@@ -177,7 +177,7 @@ export default function GuideDashboardScreen() {
 					</Text>
 				</View>
 
-				{/* Stats cards */}
+				{}
 				{loadingStats ? (
 					<View className="mb-8 h-[200px] items-center justify-center">
 						<ActivityIndicator size="large" color="#8B1A1A" />
@@ -226,7 +226,7 @@ export default function GuideDashboardScreen() {
 					</View>
 				)}
 
-				{/* New Requests */}
+				{}
 				<View className="flex-row justify-between items-center mb-4">
 					<View className="flex-row items-center">
 						<Text className="font-displaySemiBold text-[20px] text-on-surface mr-3">

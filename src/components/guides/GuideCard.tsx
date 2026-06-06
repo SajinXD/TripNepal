@@ -1,7 +1,4 @@
-// src/components/guides/GuideCard.tsx
-//
-// 🎨 Matches the guide cards in your "Find a Guide" screen 8.
-// Photo + name + status + role + tags + description + Chat/Call buttons.
+
 
 import { Image } from 'expo-image';
 import { View, Text, Pressable } from 'react-native';
@@ -16,8 +13,8 @@ export interface GuideCardData {
   avatarUrl: string;
   rating: number;
   status: 'online' | 'busy' | 'offline';
-  roleTag: string; // "Senior Lead Guide", "Cultural Expert", "Wildlife Guide"
-  specializations: string[]; // ["EVEREST REGION", "PHOTOGRAPHY"]
+  roleTag: string; 
+  specializations: string[]; 
   bio: string;
 }
 
@@ -59,7 +56,7 @@ export function GuideCard({ guide, onChat, onCall }: GuideCardProps) {
         elevation: 2,
       }}
     >
-      {/* Top row: avatar + name + rating */}
+      {}
       <View className="flex-row items-start mb-3">
         <View className="relative">
           <Image
@@ -67,7 +64,7 @@ export function GuideCard({ guide, onChat, onCall }: GuideCardProps) {
             style={{ width: 60, height: 60, borderRadius: 30 }}
             contentFit="cover"
           />
-          {/* Status dot */}
+          {}
           <View
             className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-card ${statusColor[guide.status]}`}
           />
@@ -91,7 +88,7 @@ export function GuideCard({ guide, onChat, onCall }: GuideCardProps) {
         </View>
       </View>
 
-      {/* Specialization tags */}
+      {}
       <View className="flex-row flex-wrap gap-1.5 mb-2">
         {guide.specializations.map((tag) => (
           <View key={tag} className="bg-divider px-2.5 py-1 rounded-md">
@@ -102,12 +99,12 @@ export function GuideCard({ guide, onChat, onCall }: GuideCardProps) {
         ))}
       </View>
 
-      {/* Bio */}
+      {}
       <Text className="font-sans text-sm text-text-secondary leading-5 mb-3" numberOfLines={2}>
         {guide.bio}
       </Text>
 
-      {/* Action buttons */}
+      {}
       <View className="flex-row gap-2">
         <View className="flex-1">
           <Button

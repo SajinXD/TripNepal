@@ -30,7 +30,7 @@ export function DestinationCard({ destination, featured = false }: DestinationCa
         contentFit="cover"
         transition={300}
       />
-      {/* Gradient Overlay for text readability */}
+      {}
       <View className="absolute inset-0 bg-black/30" />
       
       <View className="flex-1 justify-end p-4">

@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
-// Module-level flag — only one listener ever registered across all hook calls
 let authListenerStarted = false;
 
 async function fetchProfile(user: any) {
@@ -16,14 +15,14 @@ async function fetchProfile(user: any) {
     .single();
 
   if (error || !data) {
-    // Profile may not exist yet (trigger is async) — retry once after a short delay
+    
     setTimeout(async () => {
       const retry = await supabase.from('profiles').select('*').eq('id', user.id).single() as any;
       if (retry.data) {
         useAuthStore.getState().setAuth(user, retry.data);
       } else {
-        // Trigger never ran or DB unavailable — build profile from auth metadata
-        // so routing still works and the user isn't stuck on the login screen
+        
+        
         useAuthStore.getState().setAuth(user, {
           id: user.id,
           role: (user.user_metadata?.role as any) || 'tourist',
@@ -40,7 +39,7 @@ function startAuthListener() {
   if (authListenerStarted) return;
   authListenerStarted = true;
 
-  // Check existing session on app start
+  
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session?.user) {
       fetchProfile(session.user);
@@ -49,7 +48,7 @@ function startAuthListener() {
     }
   });
 
-  // Single global listener for auth state changes
+  
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
       await fetchProfile(session.user);

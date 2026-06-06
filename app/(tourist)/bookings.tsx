@@ -37,7 +37,7 @@ export default function BookingsScreen() {
 
   const loadBookings = useCallback(async () => {
     if (!user) return;
-    // @ts-ignore
+    
     const { data } = await (supabase.from('bookings') as any)
       .select('*, guide_profiles(profiles(full_name, avatar_url))')
       .eq('tourist_id', user.id)
@@ -86,7 +86,7 @@ export default function BookingsScreen() {
                 .update({ status: 'completed' })
                 .eq('id', booking.id);
               if (error) throw error;
-              // DB trigger handle_booking_completed auto-increments guide's trip counter
+              
               await loadBookings();
               setReviewBooking(booking);
               setReviewRating(5);
@@ -133,7 +133,7 @@ export default function BookingsScreen() {
       <View className="px-5 pt-5 pb-2">
         <Text className="font-displayBold text-[24px] text-on-surface mb-4">My Bookings</Text>
 
-        {/* Filter tabs */}
+        {}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5 px-5">
           {FILTER_TABS.map(tab => (
             <Pressable
@@ -182,9 +182,9 @@ export default function BookingsScreen() {
                   className="bg-white rounded-[16px] border border-outline-variant mb-4 overflow-hidden"
                   style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
                 >
-                  {/* Tappable area — navigates to booking detail */}
+                  {}
                   <Pressable onPress={() => router.push(`/booking/${booking.id}` as any)}>
-                    {/* Status bar */}
+                    {}
                     <View style={{ backgroundColor: cfg.bg }} className="px-4 py-2 flex-row items-center">
                       <StatusIcon size={13} color={cfg.color} />
                       <Text style={{ color: cfg.color }} className="font-bodyBold text-[11px] uppercase tracking-wider ml-1.5">
@@ -195,7 +195,7 @@ export default function BookingsScreen() {
                       </Text>
                     </View>
 
-                    {/* Guide info + trip info */}
+                    {}
                     <View className="px-4 pt-4 pb-3">
                       <View className="flex-row items-center mb-3">
                         <Avatar src={guideAvatarUrl} size={44} />
@@ -226,7 +226,7 @@ export default function BookingsScreen() {
                     </View>
                   </Pressable>
 
-                  {/* Footer — outside nav Pressable so action buttons work on web */}
+                  {}
                   <View className="flex-row items-center justify-between px-4 pb-4 pt-3 border-t border-outline-variant">
                     <View>
                       <Text className="font-body text-[11px] text-on-surface-variant">Total Amount</Text>
@@ -236,7 +236,7 @@ export default function BookingsScreen() {
                     </View>
 
                     <View className="flex-row gap-2 items-center">
-                      {/* Message Guide — always available for direct chat */}
+                      {}
                       <Pressable
                         onPress={() => handleMessageGuide(booking.guide_id)}
                         className="bg-primary px-3 py-2 rounded-full flex-row items-center"
@@ -277,7 +277,7 @@ export default function BookingsScreen() {
             })
           )}
 
-          {/* Always-visible Find a Guide button */}
+          {}
           <Pressable
             onPress={() => router.push('/guides' as any)}
             className="mt-2 mb-6 bg-white border border-outline-variant rounded-[16px] py-4 items-center flex-row justify-center"
@@ -291,7 +291,7 @@ export default function BookingsScreen() {
         </ScrollView>
       )}
 
-      {/* Review Modal */}
+      {}
       <Modal visible={reviewModalVisible} transparent animationType="slide" onRequestClose={() => setReviewModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={reviewStyles.overlay} onPress={() => setReviewModalVisible(false)} />
@@ -301,7 +301,7 @@ export default function BookingsScreen() {
           </Text>
           <Text style={reviewStyles.subtitle}>Trip completed! Share your experience.</Text>
 
-          {/* Stars */}
+          {}
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 16 }}>
             {[1, 2, 3, 4, 5].map(n => (
               <TouchableOpacity key={n} onPress={() => setReviewRating(n)} style={{ padding: 6 }}>
